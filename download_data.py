@@ -39,13 +39,15 @@ BRVM_ASSETS = {
 }
 
 
-def download_crypto_coingecko(coin_id, filename, days=730):
+def download_crypto_coinpaprika(coin_id, filename, days=730):
     """
-    Télécharge l'historique d'une crypto depuis CoinGecko (gratuit, sans clé)
+    Télécharge l'historique d'une crypto depuis CoinPaprika (gratuit, sans clé)
     """
     try:
-        url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
-        params = {"vs_currency": "usd", "days": days, "interval": "daily"}
+        from datetime import timedelta
+        start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+        url = f"https://api.coinpaprika.com/v1/tickers/{coin_id}/historical"
+        params = {"start": start_date, "interval": "1d"}
         
         response = requests.get(url, params=params, timeout=30)
         
@@ -55,13 +57,12 @@ def download_crypto_coingecko(coin_id, filename, days=730):
         
         data = response.json()
         
-        if "prices" not in data:
-            print(f"   ❌ Pas de données de prix")
+        if not data or not isinstance(data, list):
+            print(f"   ❌ Pas de données")
             return None
         
-        prices = data["prices"]
-        df = pd.DataFrame(prices, columns=["timestamp", "price"])
-        df["date"] = pd.to_datetime(df["timestamp"], unit="ms")
+        df = pd.DataFrame(data)
+        df["date"] = pd.to_datetime(df["timestamp"]).dt.tz_localize(None)
         df = df.set_index("date")[["price"]]
         df.columns = ["Close"]
         
@@ -137,11 +138,17 @@ def main():
     print("=" * 60)
     
     # 1. Cryptos
-    print("\n₿ CRYPTOMONNAIES")
-    print("-" * 60)
-    for coin_id, filename in CRYPTO_ASSETS.items():
-        print(f"📥 {filename}...")
-        download_crypto_coingecko(coin_id, filename)
+print("\n₿ CRYPTOMONNAIES")
+print("-" * 60)
+crypto_map = {
+    "btc-bitcoin": "BTC-USD",
+    "eth-ethereum": "ETH-USD",
+    "sol-solana": "SOL-USD",
+    "ada-cardano": "ADA-USD",
+}
+for coin_id, filename in crypto_map.items():
+    print(f"📥 {filename}...")
+    download_crypto_coinpaprika(coin_id, filename)
     
     # 2. Actions US
     print("\n📈 ACTIONS US")
