@@ -286,14 +286,15 @@ if prices_df is None or prices_df.empty:
 
 returns_df = np.log(prices_df / prices_df.shift(1)).dropna()
 
-# Poids équipondérés par défaut
-n = len(selected)
+# Recalculer n APRÈS l'alignement des dates
+n = len(returns_df.columns)
 weights_eq = np.array([1/n] * n)
+
+# Mettre à jour la liste des actifs réellement utilisés
+selected = list(returns_df.columns)
+
 portfolio_returns = returns_df.dot(weights_eq)
 portfolio_prices = (1 + portfolio_returns).cumprod() * 100
-
-metrics = calculate_all_metrics(portfolio_returns, portfolio_prices)
-portfolio_metrics = get_optimal_portfolios(returns_df)
 
 
 # ============================================================
