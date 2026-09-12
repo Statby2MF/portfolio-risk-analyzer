@@ -88,7 +88,7 @@ def calculate_sortino_ratio(returns, risk_free_rate=0.02):
     return np.mean(excess) / np.std(downside) * np.sqrt(252)
 
 
-def calculate_calm ar_ratio(returns, prices):
+def calculate_calmar_ratio(returns, prices):
     """Ratio de Calmar (rendement / drawdown)"""
     annual_return = np.mean(returns) * 252
     max_dd = abs(calculate_max_drawdown(prices))
