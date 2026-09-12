@@ -1,6 +1,6 @@
 """
 Télécharge et stocke les données localement.
-Une seule fois. Ensuite le dashboard lit depuis les fichiers locaux.
+Actions US + BRVM uniquement (pas de crypto = pas de problème d'API).
 
 Usage:
     python download_data.py
@@ -14,20 +14,14 @@ from datetime import datetime, timedelta
 DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# Actifs à télécharger
-CRYPTO_ASSETS = {
-    "bitcoin": "BTC-USD",
-    "ethereum": "ETH-USD",
-    "solana": "SOL-USD",
-    "cardano": "cardano",
-}
-
-# Actions US (via Yahoo Finance comme fallback)
+# Actions US (via Yahoo Finance)
 STOCK_ASSETS = {
     "SPY": "S&P 500 ETF",
     "GLD": "Or",
     "TLT": "Obligations US",
     "QQQ": "Nasdaq 100",
+    "AAPL": "Apple",
+    "MSFT": "Microsoft",
 }
 
 # Actions BRVM (via le dépôt GitHub public)
@@ -36,44 +30,9 @@ BRVM_ASSETS = {
     "ORAC": "Orange Côte d'Ivoire",
     "SGBC": "Société Générale CI",
     "ECOC": "Ecobank CI",
+    "BOAB": "Bank of Africa",
+    "CBIBF": "Coris Bank",
 }
-
-
-def download_crypto_coinpaprika(coin_id, filename, days=730):
-    """
-    Télécharge l'historique d'une crypto depuis CoinPaprika (gratuit, sans clé)
-    """
-    try:
-        from datetime import timedelta
-        start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-        url = f"https://api.coinpaprika.com/v1/tickers/{coin_id}/historical"
-        params = {"start": start_date, "interval": "1d"}
-        
-        response = requests.get(url, params=params, timeout=30)
-        
-        if response.status_code != 200:
-            print(f"   ❌ Erreur HTTP {response.status_code}")
-            return None
-        
-        data = response.json()
-        
-        if not data or not isinstance(data, list):
-            print(f"   ❌ Pas de données")
-            return None
-        
-        df = pd.DataFrame(data)
-        df["date"] = pd.to_datetime(df["timestamp"]).dt.tz_localize(None)
-        df = df.set_index("date")[["price"]]
-        df.columns = ["Close"]
-        
-        filepath = f"{DATA_DIR}/{filename}.csv"
-        df.to_csv(filepath)
-        print(f"   ✅ {len(df)} points sauvegardés dans {filepath}")
-        return df
-        
-    except Exception as e:
-        print(f"   ❌ Erreur: {e}")
-        return None
 
 
 def download_stock_yahoo(symbol, period="2y"):
@@ -121,6 +80,12 @@ def download_brvm(ticker):
         # Garder uniquement le Close
         if "Close" in df.columns:
             df = df[["Close"]]
+        else:
+            # Prendre la dernière colonne numérique
+            numeric_cols = df.select_dtypes(include=['number']).columns
+            if len(numeric_cols) > 0:
+                df = df[[numeric_cols[-1]]]
+                df.columns = ["Close"]
         
         filepath = f"{DATA_DIR}/{ticker}.csv"
         df.to_csv(filepath)
@@ -135,29 +100,17 @@ def download_brvm(ticker):
 def main():
     print("=" * 60)
     print("📥 TÉLÉCHARGEMENT DES DONNÉES")
+    print("   (Actions US + BRVM uniquement)")
     print("=" * 60)
     
-    # 1. Cryptos
-print("\n₿ CRYPTOMONNAIES")
-print("-" * 60)
-crypto_map = {
-    "btc-bitcoin": "BTC-USD",
-    "eth-ethereum": "ETH-USD",
-    "sol-solana": "SOL-USD",
-    "ada-cardano": "ADA-USD",
-}
-for coin_id, filename in crypto_map.items():
-    print(f"📥 {filename}...")
-    download_crypto_coinpaprika(coin_id, filename)
-    
-    # 2. Actions US
+    # 1. Actions US
     print("\n📈 ACTIONS US")
     print("-" * 60)
     for symbol, name in STOCK_ASSETS.items():
         print(f"📥 {symbol} ({name})...")
         download_stock_yahoo(symbol)
     
-    # 3. Actions BRVM
+    # 2. Actions BRVM
     print("\n🌍 ACTIONS BRVM")
     print("-" * 60)
     for ticker, name in BRVM_ASSETS.items():
@@ -168,6 +121,12 @@ for coin_id, filename in crypto_map.items():
     print("✅ TÉLÉCHARGEMENT TERMINÉ")
     print(f"📁 Données sauvegardées dans : {DATA_DIR}/")
     print("=" * 60)
+    
+    # Afficher les fichiers téléchargés
+    files = [f for f in os.listdir(DATA_DIR) if f.endswith('.csv')]
+    print(f"\n📊 {len(files)} fichiers disponibles :")
+    for f in sorted(files):
+        print(f"   • {f}")
 
 
 if __name__ == "__main__":
