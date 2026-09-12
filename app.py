@@ -2,6 +2,8 @@
 Portfolio Risk Analyzer - Dashboard Professionnel
 Analyse de risque pour portefeuille multi-actifs
 """
+from src.report_generator import generate_pdf_report
+import io
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -267,7 +269,40 @@ with st.sidebar:
         ⚠️ Ceci n'est pas un conseil financier
     </div>
     """, unsafe_allow_html=True)
+# Dans la sidebar, après le bouton Actualiser
+st.markdown("---")
+st.markdown("### 📄 Rapport PDF")
 
+if st.button("📥 Générer le rapport"):
+    with st.spinner("Génération du PDF..."):
+        try:
+            # Créer le PDF dans un buffer
+            pdf_buffer = io.BytesIO()
+            
+            generate_pdf_report(
+                pdf_buffer,
+                "Portefeuille Multi-Actifs",
+                selected,
+                metrics,
+                prices_df,
+                returns_df,
+                portfolio_metrics,
+                portfolio_returns,
+                portfolio_prices
+            )
+            
+            pdf_buffer.seek(0)
+            
+            st.download_button(
+                label="📥 Télécharger le PDF",
+                data=pdf_buffer,
+                file_name=f"rapport_risque_{datetime.now().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf"
+            )
+            
+            st.success("✅ Rapport généré !")
+        except Exception as e:
+            st.error(f"❌ Erreur: {e}")
 
 # ============================================================
 # CHARGEMENT DES DONNÉES
