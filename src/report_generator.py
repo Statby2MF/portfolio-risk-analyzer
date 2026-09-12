@@ -193,69 +193,89 @@ def generate_pdf_report(
     ]))
     elements.append(alloc_table)
     
-   interpretation = f"""
-<b>Performance du portefeuille</b><br/>
-Sur la période analysée, le portefeuille a généré un rendement annualisé de 
-<b>{metrics['rendement_annualise']*100:.2f}%</b> pour une volatilité de 
-<b>{metrics['volatilite_annuelle']*100:.2f}%</b>. Le ratio de Sharpe de 
-<b>{metrics['sharpe']:.2f}</b> indique {(
-    'une excellente performance ajustée au risque, largement supérieure au marché'
-    if metrics['sharpe'] > 2 else
-    'une très bonne performance ajustée au risque'
-    if metrics['sharpe'] > 1 else
-    'une performance correcte ajustée au risque'
-    if metrics['sharpe'] > 0.5 else
-    'une performance faible ajustée au risque, à améliorer'
-)}. Le ratio de Sortino de <b>{metrics['sortino']:.2f}</b> confirme que la performance 
-est {'très solide' if metrics['sortino'] > 1.5 else 'correcte'} lorsque l'on ne pénalise 
-que la volatilité à la baisse.
-<br/><br/>
-
-<b>Analyse du risque</b><br/>
-La VaR à 99% de <b>{metrics['var_99_historique']*100:.2f}%</b> signifie que dans 99% des cas, 
-la perte journalière ne devrait pas dépasser ce seuil. Autrement dit, sur 100 jours de trading, 
-seul 1 jour pourrait enregistrer une perte supérieure à ce niveau. 
-L'Expected Shortfall de <b>{metrics['es_99']*100:.2f}%</b> — qui mesure la perte moyenne 
-lorsque ce seuil est franchi — reste {'contenu' if abs(metrics['es_99']) < 0.05 else 'élevé'}, 
-ce qui indique {'une bonne résistance aux chocs extrêmes' if abs(metrics['es_99']) < 0.05 else 'une vulnérabilité aux événements de marché exceptionnels'}.
-<br/><br/>
-
-<b>Résistance aux crises</b><br/>
-Le drawdown maximal de <b>{metrics['max_drawdown']*100:.2f}%</b> représente la pire baisse 
-enregistrée sur la période. Un drawdown {'faible' if abs(metrics['max_drawdown']) < 0.1 else 'modéré' if abs(metrics['max_drawdown']) < 0.2 else 'important'} 
-signifie que le portefeuille {'a bien résisté aux phases de correction' if abs(metrics['max_drawdown']) < 0.1 else 'a connu des phases de stress notables'}. 
-Le ratio de Calmar de <b>{metrics['rendement_annualise'] / abs(metrics['max_drawdown']):.2f}</b> 
-(rendement / drawdown) confirme {'une bonne efficacité' if metrics['rendement_annualise'] / abs(metrics['max_drawdown']) > 1 else 'une efficacité limitée'} 
-dans la gestion des phases baissières.
-<br/><br/>
-
-<b>Forme de la distribution</b><br/>
-La skewness de <b>{metrics['skewness']:.3f}</b> indique une distribution {(
-    'légèrement asymétrique à droite (plus de gains extrêmes que de pertes)'
-    if metrics['skewness'] > 0.1 else
-    'légèrement asymétrique à gauche (plus de pertes extrêmes que de gains)'
-    if metrics['skewness'] < -0.1 else
-    'quasi-symétrique'
-)}. La kurtosis de <b>{metrics['kurtosis']:.3f}</b> ({(
-    'queues épaisses — risque d\\'événements extrêmes plus fréquents que sous une loi normale'
-    if metrics['kurtosis'] > 1 else
-    'proche de la loi normale'
-    if abs(metrics['kurtosis']) < 0.5 else
-    'queues légèrement plus fines que la normale'
-)}).
-<br/><br/>
-
-<b>Recommandations</b><br/>
-• <b>Allocation suggérée :</b> Privilégier le portefeuille Max Sharpe qui offre le meilleur 
-compromis rendement/risque.<br/>
-• <b>Surveillance :</b> Porter une attention particulière aux jours où la perte approche 
-la VaR 99% ({metrics['var_99_historique']*100:.2f}%).<br/>
-• <b>Diversification :</b> {(
-    'Le portefeuille est bien diversifié avec des contributions de risque équilibrées.'
-    if metrics['sharpe'] > 1 else
-    'Envisager une diversification accrue pour réduire la volatilité.'
-)}<br/>
-"""
+      # ===== SECTION 4 : INTERPRÉTATION =====
+    elements.append(Paragraph("4. Interprétation des résultats", heading_style))
+    
+    sharpe_comment = (
+        'une excellente performance ajustée au risque, largement supérieure au marché'
+        if metrics['sharpe'] > 2 else
+        'une très bonne performance ajustée au risque'
+        if metrics['sharpe'] > 1 else
+        'une performance correcte ajustée au risque'
+        if metrics['sharpe'] > 0.5 else
+        'une performance faible ajustée au risque, à améliorer'
+    )
+    
+    es_comment = (
+        'une bonne résistance aux chocs extrêmes'
+        if abs(metrics['es_99']) < 0.05 else
+        'une vulnérabilité aux événements de marché exceptionnels'
+    )
+    
+    dd_comment = (
+        'faible'
+        if abs(metrics['max_drawdown']) < 0.1 else
+        'modéré'
+        if abs(metrics['max_drawdown']) < 0.2 else
+        'important'
+    )
+    
+    skew_comment = (
+        'légèrement asymétrique à droite (plus de gains extrêmes que de pertes)'
+        if metrics['skewness'] > 0.1 else
+        'légèrement asymétrique à gauche (plus de pertes extrêmes que de gains)'
+        if metrics['skewness'] < -0.1 else
+        'quasi-symétrique'
+    )
+    
+    kurt_comment = (
+        'queues épaisses — risque d\'événements extrêmes plus fréquents que sous une loi normale'
+        if metrics['kurtosis'] > 1 else
+        'proche de la loi normale'
+        if abs(metrics['kurtosis']) < 0.5 else
+        'queues légèrement plus fines que la normale'
+    )
+    
+    calmar = metrics['rendement_annualise'] / abs(metrics['max_drawdown']) if metrics['max_drawdown'] != 0 else 0
+    
+    interpretation = f"""
+    <b>Performance du portefeuille</b><br/>
+    Sur la période analysée, le portefeuille a généré un rendement annualisé de 
+    <b>{metrics['rendement_annualise']*100:.2f}%</b> pour une volatilité de 
+    <b>{metrics['volatilite_annuelle']*100:.2f}%</b>. Le ratio de Sharpe de 
+    <b>{metrics['sharpe']:.2f}</b> indique {sharpe_comment}. Le ratio de Sortino de 
+    <b>{metrics['sortino']:.2f}</b> confirme que la performance est 
+    {'très solide' if metrics['sortino'] > 1.5 else 'correcte'} lorsque l'on ne pénalise 
+    que la volatilité à la baisse.
+    <br/><br/>
+    <b>Analyse du risque</b><br/>
+    La VaR à 99% de <b>{metrics['var_99_historique']*100:.2f}%</b> signifie que dans 99% des cas, 
+    la perte journalière ne devrait pas dépasser ce seuil. Autrement dit, sur 100 jours de trading, 
+    seul 1 jour pourrait enregistrer une perte supérieure à ce niveau. 
+    L'Expected Shortfall de <b>{metrics['es_99']*100:.2f}%</b> — qui mesure la perte moyenne 
+    lorsque ce seuil est franchi — indique {es_comment}.
+    <br/><br/>
+    <b>Résistance aux crises</b><br/>
+    Le drawdown maximal de <b>{metrics['max_drawdown']*100:.2f}%</b> représente la pire baisse 
+    enregistrée sur la période. Un drawdown {dd_comment} signifie que le portefeuille 
+    {'a bien résisté aux phases de correction' if abs(metrics['max_drawdown']) < 0.1 else 'a connu des phases de stress notables'}. 
+    Le ratio de Calmar de <b>{calmar:.2f}</b> (rendement / drawdown) confirme 
+    {'une bonne efficacité' if calmar > 1 else 'une efficacité limitée'} 
+    dans la gestion des phases baissières.
+    <br/><br/>
+    <b>Forme de la distribution</b><br/>
+    La skewness de <b>{metrics['skewness']:.3f}</b> indique une distribution {skew_comment}. 
+    La kurtosis de <b>{metrics['kurtosis']:.3f}</b> ({kurt_comment}).
+    <br/><br/>
+    <b>Recommandations</b><br/>
+    • <b>Allocation suggérée :</b> Privilégier le portefeuille Max Sharpe qui offre le meilleur 
+    compromis rendement/risque.<br/>
+    • <b>Surveillance :</b> Porter une attention particulière aux jours où la perte approche 
+    la VaR 99% ({metrics['var_99_historique']*100:.2f}%).<br/>
+    • <b>Diversification :</b> {'Le portefeuille est bien diversifié avec des contributions de risque équilibrées.' if metrics['sharpe'] > 1 else 'Envisager une diversification accrue pour réduire la volatilité.'}<br/>
+    """
+    
+    elements.append(Paragraph(interpretation, body_style))
     
     # ===== SECTION 5 : AVERTISSEMENT =====
     elements.append(Spacer(1, 1*cm))
