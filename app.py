@@ -295,7 +295,9 @@ selected = list(returns_df.columns)
 
 portfolio_returns = returns_df.dot(weights_eq)
 portfolio_prices = (1 + portfolio_returns).cumprod() * 100
-
+# Calcul des métriques
+metrics = calculate_all_metrics(portfolio_returns, portfolio_prices)
+portfolio_metrics = get_optimal_portfolios(returns_df)
 
 # ============================================================
 # MÉTRIQUES PRINCIPALES
