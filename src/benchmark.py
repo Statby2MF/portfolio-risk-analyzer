@@ -102,15 +102,37 @@ def calculate_capture_ratios(portfolio_returns, benchmark_returns):
 
 def calculate_all_benchmark_metrics(portfolio_returns, benchmark_returns, risk_free_rate=0.02):
     """
-    Calcule toutes les métriques de comparaison avec le benchmark
+    Calcule toutes les métriques de comparaison avec le benchmark.
+    Normalise les dates pour éviter les problèmes de fuseaux horaires.
     """
-    # Aligner
-    common_idx = portfolio_returns.index.intersection(benchmark_returns.index)
-    port = portfolio_returns.loc[common_idx]
-    bench = benchmark_returns.loc[common_idx]
+    # Normaliser les index (enlever les heures et fuseaux)
+    port = portfolio_returns.copy()
+    bench = benchmark_returns.copy()
     
-    if len(port) < 10:
+    # Enlever le fuseau horaire si présent
+    if hasattr(port.index, 'tz') and port.index.tz is not None:
+        port.index = port.index.tz_localize(None)
+    if hasattr(bench.index, 'tz') and bench.index.tz is not None:
+        bench.index = bench.index.tz_localize(None)
+    
+    # Normaliser à la date (sans heure)
+    port.index = pd.to_datetime(port.index).normalize()
+    bench.index = pd.to_datetime(bench.index).normalize()
+    
+    # Supprimer les doublons d'index
+    port = port[~port.index.duplicated(keep='first')]
+    bench = bench[~bench.index.duplicated(keep='first')]
+    
+    # Aligner les dates
+    common_idx = port.index.intersection(bench.index)
+    
+    print(f"   📅 Dates communes : {len(common_idx)}")
+    
+    if len(common_idx) < 10:
         return None
+    
+    port = port.loc[common_idx]
+    bench = bench.loc[common_idx]
     
     # Métriques
     ab = calculate_alpha_beta(port, bench, risk_free_rate)
@@ -136,7 +158,7 @@ def calculate_all_benchmark_metrics(portfolio_returns, benchmark_returns, risk_f
     port_dd = ((port_cum - port_cum.cummax()) / port_cum.cummax()).min()
     bench_dd = ((bench_cum - bench_cum.cummax()) / bench_cum.cummax()).min()
     
-    # Rendement total sur la période
+    # Rendement total
     port_total = port_cum.iloc[-1] - 1
     bench_total = bench_cum.iloc[-1] - 1
     
@@ -162,6 +184,7 @@ def calculate_all_benchmark_metrics(portfolio_returns, benchmark_returns, risk_f
         "up_capture": capture['up_capture'],
         "down_capture": capture['down_capture'],
         "excess_return": port_return_ann - bench_return_ann,
+        "n_common_days": len(common_idx),
     }
 
 
