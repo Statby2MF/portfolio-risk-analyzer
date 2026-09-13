@@ -1,6 +1,6 @@
 """
 Portfolio Risk Analyzer - Statby2mf
-Dashboard professionnel avec identité visuelle
+Dashboard professionnel complet avec rapport PDF
 """
 import streamlit as st
 import pandas as pd
@@ -10,12 +10,24 @@ import plotly.express as px
 from datetime import datetime, timedelta
 import sys
 import os
+import io
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.data_manager import get_available_assets, load_portfolio
 from src.risk_metrics import calculate_all_metrics
-from src.portfolio_optimizer import get_optimal_portfolios, portfolio_return, portfolio_volatility, portfolio_sharpe
+from src.portfolio_optimizer import (
+    get_optimal_portfolios,
+    portfolio_return,
+    portfolio_volatility,
+    portfolio_sharpe,
+)
+from src.validation import in_out_validation, walk_forward_validation
+from src.benchmark import calculate_all_benchmark_metrics
+from src.stress_tests import run_all_stress_tests
+from src.risk_contribution import calculate_risk_contribution
+from src.report_generator import generate_pdf_report
+
 
 # ============================================================
 # CONFIGURATION
@@ -29,25 +41,22 @@ st.set_page_config(
 )
 
 # ============================================================
-# CSS - IDENTITÉ VISUELLE STATBY2MF
+# CSS
 # ============================================================
 
 st.markdown("""
 <style>
-    /* ===== FOND GLOBAL ===== */
     .stApp {
         background: linear-gradient(135deg, #0a3d2e 0%, #0d4a38 50%, #0a3d2e 100%);
         color: #f5f0e6;
     }
     
-    /* ===== HEADER ===== */
     .main-header {
         background: linear-gradient(90deg, rgba(201,162,39,0.15) 0%, rgba(74,93,58,0.3) 100%);
         border: 1px solid rgba(201,162,39,0.4);
         border-radius: 20px;
         padding: 30px 40px;
         margin-bottom: 30px;
-        backdrop-filter: blur(20px);
     }
     
     .main-header h1 {
@@ -57,7 +66,6 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin: 0;
-        letter-spacing: -1px;
     }
     
     .main-header .brand {
@@ -70,42 +78,22 @@ st.markdown("""
     
     .main-header p {
         color: #d4c98a;
-        font-size: 1rem;
         margin-top: 8px;
         margin-bottom: 0;
     }
     
-    /* ===== CARTES MÉTRIQUES ===== */
     .metric-card {
         background: linear-gradient(135deg, rgba(74,93,58,0.5) 0%, rgba(10,61,46,0.7) 100%);
         border: 1px solid rgba(201,162,39,0.3);
         border-radius: 16px;
         padding: 22px 24px;
         transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .metric-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, #c9a227, #9c9152);
-        opacity: 0;
-        transition: opacity 0.3s;
     }
     
     .metric-card:hover {
         transform: translateY(-4px);
         border-color: rgba(201,162,39,0.7);
         box-shadow: 0 12px 40px rgba(201,162,39,0.2);
-    }
-    
-    .metric-card:hover::before {
-        opacity: 1;
     }
     
     .metric-label {
@@ -122,14 +110,8 @@ st.markdown("""
         font-size: 28px;
         font-weight: 700;
         line-height: 1.1;
-        letter-spacing: -0.5px;
     }
     
-    .positive { color: #4ade80; }
-    .negative { color: #f87171; }
-    .neutral { color: #c9a227; }
-    
-    /* ===== SECTION TITLES ===== */
     .section-title {
         color: #ffffff;
         font-size: 1.4rem;
@@ -139,55 +121,36 @@ st.markdown("""
         border-left: 4px solid #c9a227;
     }
     
-    /* ===== SIDEBAR - CONTRASTES AMÉLIORÉS ===== */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0d4a38 0%, #0a3d2e 100%);
         border-right: 1px solid rgba(201,162,39,0.3);
     }
     
-    /* Tous les textes de la sidebar */
     [data-testid="stSidebar"] * {
         color: #f5f0e6 !important;
     }
     
     [data-testid="stSidebar"] h1, 
     [data-testid="stSidebar"] h2, 
-    [data-testid="stSidebar"] h3,
-    [data-testid="stSidebar"] h4 {
+    [data-testid="stSidebar"] h3 {
         color: #c9a227 !important;
         font-weight: 700 !important;
     }
     
-    /* Labels des inputs */
     [data-testid="stSidebar"] label {
         color: #d4c98a !important;
         font-weight: 600 !important;
-        font-size: 14px !important;
     }
     
-    /* Radio buttons */
-    [data-testid="stSidebar"] .stRadio label {
-        color: #f5f0e6 !important;
-        font-weight: 500 !important;
-    }
-    
-    /* Multiselect */
-    [data-testid="stSidebar"] .stMultiSelect label {
-        color: #d4c98a !important;
-    }
-    
-    /* Messages d'info/warning/error dans la sidebar */
     [data-testid="stSidebar"] .stAlert {
         background: rgba(201,162,39,0.15) !important;
         border: 1px solid rgba(201,162,39,0.4) !important;
-        color: #ffffff !important;
     }
     
     [data-testid="stSidebar"] .stAlert p {
         color: #ffffff !important;
     }
     
-    /* ===== BOUTONS ===== */
     .stButton > button {
         background: linear-gradient(135deg, #c9a227 0%, #a88a1f 100%);
         color: #0a3d2e;
@@ -195,8 +158,6 @@ st.markdown("""
         border-radius: 12px;
         padding: 12px 28px;
         font-weight: 700;
-        font-size: 14px;
-        transition: all 0.3s;
         width: 100%;
     }
     
@@ -206,7 +167,16 @@ st.markdown("""
         color: #0a3d2e;
     }
     
-    /* ===== ONGLETS ===== */
+    .stDownloadButton > button {
+        background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+        color: #0a3d2e;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 28px;
+        font-weight: 700;
+        width: 100%;
+    }
+    
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background: rgba(74,93,58,0.4);
@@ -227,7 +197,6 @@ st.markdown("""
         color: #0a3d2e;
     }
     
-    /* ===== FOOTER ===== */
     .footer {
         text-align: center;
         color: #9c9152;
@@ -243,18 +212,10 @@ st.markdown("""
         letter-spacing: 2px;
     }
     
-    /* ===== TEXTE GÉNÉRAL ===== */
-    p, span, div {
-        color: #f5f0e6;
-    }
-    
-    /* ===== DATAFRAMES ===== */
-    .dataframe {
-        background: rgba(74,93,58,0.3) !important;
-        color: #f5f0e6 !important;
-    }
+    p, span, div { color: #f5f0e6; }
 </style>
 """, unsafe_allow_html=True)
+
 
 # ============================================================
 # HEADER
@@ -268,6 +229,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+
 # ============================================================
 # SIDEBAR
 # ============================================================
@@ -276,16 +238,10 @@ with st.sidebar:
     st.markdown("<h3 style='color: #c9a227;'>⚙️ Configuration</h3>", unsafe_allow_html=True)
     st.markdown("---")
     
-    # Sélection du marché
-    market = st.radio(
-        "🌍 Marché",
-        ["BRVM", "US", "Mixte"],
-        index=0
-    )
+    market = st.radio("🌍 Marché", ["BRVM", "US", "Mixte"], index=0)
     
     st.markdown("---")
     
-    # Actifs disponibles
     if market == "BRVM":
         available = get_available_assets("BRVM")
     elif market == "US":
@@ -297,7 +253,6 @@ with st.sidebar:
         st.error("❌ Aucune donnée. Lancez `python download_data.py`")
         st.stop()
     
-    # Sélection des actifs
     selected = st.multiselect(
         "📈 Actifs du portefeuille",
         available,
@@ -310,7 +265,6 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Période
     period = st.selectbox(
         "📅 Période d'analyse",
         ["1 an", "2 ans", "3 ans", "5 ans", "Tout"],
@@ -330,6 +284,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
+
 # ============================================================
 # CHARGEMENT
 # ============================================================
@@ -345,7 +300,6 @@ if prices_df is None or prices_df.empty:
 
 returns_df = np.log(prices_df / prices_df.shift(1)).dropna()
 
-# Recalculer n après alignement
 n = len(returns_df.columns)
 weights_eq = np.array([1/n] * n)
 selected = list(returns_df.columns)
@@ -356,8 +310,54 @@ portfolio_prices = (1 + portfolio_returns).cumprod() * 100
 metrics = calculate_all_metrics(portfolio_returns, portfolio_prices)
 portfolio_metrics = get_optimal_portfolios(returns_df)
 
+
 # ============================================================
-# MÉTRIQUES
+# BOUTON RAPPORT PDF
+# ============================================================
+
+st.markdown("<div class='section-title'>📄 Rapport d'analyse</div>", unsafe_allow_html=True)
+
+col1, col2 = st.columns([1, 3])
+
+with col1:
+    if st.button("📄 Générer le rapport PDF"):
+        with st.spinner("Génération du PDF en cours..."):
+            try:
+                pdf_buffer = io.BytesIO()
+                
+                generate_pdf_report(
+                    pdf_buffer,
+                    "Portefeuille Multi-Actifs",
+                    selected,
+                    metrics,
+                    prices_df,
+                    returns_df,
+                    portfolio_metrics,
+                    portfolio_returns,
+                    portfolio_prices
+                )
+                
+                pdf_buffer.seek(0)
+                
+                st.session_state['pdf_buffer'] = pdf_buffer.getvalue()
+                st.success("✅ Rapport généré !")
+            except Exception as e:
+                st.error(f"❌ Erreur: {e}")
+
+with col2:
+    if 'pdf_buffer' in st.session_state:
+        st.download_button(
+            label="📥 Télécharger le rapport PDF",
+            data=st.session_state['pdf_buffer'],
+            file_name=f"rapport_risque_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+            mime="application/pdf"
+        )
+    else:
+        st.info("💡 Cliquez sur 'Générer le rapport' pour créer votre PDF personnalisé")
+
+
+# ============================================================
+# MÉTRIQUES PRINCIPALES
 # ============================================================
 
 st.markdown("<div class='section-title'>📊 Vue d'ensemble</div>", unsafe_allow_html=True)
@@ -387,7 +387,7 @@ with col3:
     st.markdown(f"""
     <div class='metric-card'>
         <div class='metric-label'>VaR 99%</div>
-        <div class='metric-value negative'>{var*100:.2f}%</div>
+        <div class='metric-value' style='color: #f87171;'>{var*100:.2f}%</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -395,8 +395,8 @@ with col4:
     es = metrics['es_99']
     st.markdown(f"""
     <div class='metric-card'>
-        <div class='metric-label'>Expected Shortfall 99%</div>
-        <div class='metric-value negative'>{es*100:.2f}%</div>
+        <div class='metric-label'>ES 99%</div>
+        <div class='metric-value' style='color: #f87171;'>{es*100:.2f}%</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -405,64 +405,107 @@ with col5:
     st.markdown(f"""
     <div class='metric-card'>
         <div class='metric-label'>Max Drawdown</div>
-        <div class='metric-value negative'>{dd*100:.2f}%</div>
+        <div class='metric-value' style='color: #f87171;'>{dd*100:.2f}%</div>
     </div>
     """, unsafe_allow_html=True)
+
 
 # ============================================================
 # ONGLETS
 # ============================================================
 
-tab1, tab2, tab3 = st.tabs(["📈 Performance", "⚠️ Risque", "🎯 Optimisation"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    "📈 Performance",
+    "⚠️ Risque",
+    "🎯 Optimisation",
+    "🔬 Validation",
+    "📊 Benchmark",
+    "💥 Stress Tests",
+    "📉 Contribution",
+])
 
+
+# ===== TAB 1 : PERFORMANCE =====
 with tab1:
     st.markdown("<div class='section-title'>📈 Évolution du portefeuille</div>", unsafe_allow_html=True)
     
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=portfolio_prices.index,
-        y=portfolio_prices.values,
-        mode='lines',
-        name='Portefeuille',
+        x=portfolio_prices.index, y=portfolio_prices.values,
+        mode='lines', name='Portefeuille',
         line=dict(color='#c9a227', width=3),
-        fill='tozeroy',
-        fillcolor='rgba(201,162,39,0.1)'
+        fill='tozeroy', fillcolor='rgba(201,162,39,0.1)'
     ))
-    
     fig.update_layout(
-        height=450,
-        template='plotly_dark',
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        hovermode='x unified',
-        margin=dict(l=0, r=0, t=10, b=0),
+        height=450, template='plotly_dark',
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        hovermode='x unified', margin=dict(l=0, r=0, t=10, b=0),
         xaxis=dict(showgrid=False),
         yaxis=dict(showgrid=True, gridcolor='rgba(201,162,39,0.1)')
     )
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown("<div class='section-title'>📊 Comparaison des actifs</div>", unsafe_allow_html=True)
+    
+    normalized = prices_df / prices_df.iloc[0] * 100
+    fig = go.Figure()
+    colors = ['#c9a227', '#4ade80', '#60a5fa', '#f87171', '#a78bfa', '#fb923c', '#34d399', '#f472b6']
+    for i, col in enumerate(normalized.columns):
+        fig.add_trace(go.Scatter(
+            x=normalized.index, y=normalized[col],
+            mode='lines', name=col,
+            line=dict(width=2, color=colors[i % len(colors)])
+        ))
+    fig.update_layout(
+        height=400, template='plotly_dark',
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        hovermode='x unified', margin=dict(l=0, r=0, t=10, b=0)
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
+
+# ===== TAB 2 : RISQUE =====
 with tab2:
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown("<div class='section-title'>📊 Distribution</div>", unsafe_allow_html=True)
         fig = go.Figure()
-        fig.add_trace(go.Histogram(
-            x=portfolio_returns,
-            nbinsx=50,
-            marker_color='#c9a227',
-            opacity=0.8
-        ))
-        fig.update_layout(height=400, template='plotly_dark', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig, width='stretch')
+        fig.add_trace(go.Histogram(x=portfolio_returns, nbinsx=50,
+                                   marker_color='#c9a227', opacity=0.8))
+        fig.add_vline(x=metrics['var_99_historique'], line_dash="dash",
+                      line_color="#f87171", annotation_text="VaR 99%")
+        fig.update_layout(height=400, template='plotly_dark',
+                          paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+        st.plotly_chart(fig, use_container_width=True)
     
     with col2:
         st.markdown("<div class='section-title'>🔗 Corrélation</div>", unsafe_allow_html=True)
         corr = returns_df.corr()
         fig = px.imshow(corr, text_auto='.2f', color_continuous_scale='YlOrBr', zmin=-1, zmax=1)
         fig.update_layout(height=400, template='plotly_dark', paper_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown("<div class='section-title'>📋 Métriques de risque</div>", unsafe_allow_html=True)
+    
+    risk_df = pd.DataFrame([
+        {"Métrique": "Volatilité annualisée", "Valeur": f"{metrics['volatilite_annuelle']*100:.2f}%"},
+        {"Métrique": "VaR 95% (historique)", "Valeur": f"{metrics['var_95_historique']*100:.2f}%"},
+        {"Métrique": "VaR 99% (historique)", "Valeur": f"{metrics['var_99_historique']*100:.2f}%"},
+        {"Métrique": "VaR 95% (Cornish-Fisher)", "Valeur": f"{metrics['var_95_cornish_fisher']*100:.2f}%"},
+        {"Métrique": "VaR 99% (Cornish-Fisher)", "Valeur": f"{metrics['var_99_cornish_fisher']*100:.2f}%"},
+        {"Métrique": "Expected Shortfall 95%", "Valeur": f"{metrics['es_95']*100:.2f}%"},
+        {"Métrique": "Expected Shortfall 99%", "Valeur": f"{metrics['es_99']*100:.2f}%"},
+        {"Métrique": "Max Drawdown", "Valeur": f"{metrics['max_drawdown']*100:.2f}%"},
+        {"Métrique": "Ratio de Sharpe", "Valeur": f"{metrics['sharpe']:.2f}"},
+        {"Métrique": "Ratio de Sortino", "Valeur": f"{metrics['sortino']:.2f}"},
+        {"Métrique": "Skewness", "Valeur": f"{metrics['skewness']:.3f}"},
+        {"Métrique": "Kurtosis", "Valeur": f"{metrics['kurtosis']:.3f}"},
+    ])
+    st.dataframe(risk_df, use_container_width=True, hide_index=True)
 
+
+# ===== TAB 3 : OPTIMISATION =====
 with tab3:
     st.markdown("<div class='section-title'>🎯 Portefeuilles optimaux</div>", unsafe_allow_html=True)
     
@@ -484,19 +527,184 @@ with tab3:
             <div class='metric-card'>
                 <div class='metric-label'>{name}</div>
                 <div style='margin-top: 12px;'>
-                    <span style='color: #9c9152; font-size: 12px;'>Rendement:</span>
-                    <span style='color: #10b981; font-weight: 700; float: right;'>{ret*100:.2f}%</span>
+                    <span style='color: #d4c98a; font-size: 12px;'>Rendement:</span>
+                    <span style='color: #4ade80; font-weight: 700; float: right;'>{ret*100:.2f}%</span>
                 </div>
                 <div style='margin-top: 6px;'>
-                    <span style='color: #9c9152; font-size: 12px;'>Volatilité:</span>
-                    <span style='color: #ef4444; font-weight: 700; float: right;'>{vol*100:.2f}%</span>
+                    <span style='color: #d4c98a; font-size: 12px;'>Volatilité:</span>
+                    <span style='color: #f87171; font-weight: 700; float: right;'>{vol*100:.2f}%</span>
                 </div>
                 <div style='margin-top: 6px;'>
-                    <span style='color: #9c9152; font-size: 12px;'>Sharpe:</span>
+                    <span style='color: #d4c98a; font-size: 12px;'>Sharpe:</span>
                     <span style='color: #c9a227; font-weight: 700; float: right;'>{sharpe:.2f}</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
+    
+    st.markdown("<div class='section-title'>📊 Allocation par portefeuille</div>", unsafe_allow_html=True)
+    
+    fig = go.Figure()
+    for name, weights in portfolios.items():
+        fig.add_trace(go.Bar(
+            name=name, x=selected, y=weights * 100,
+            text=[f"{w*100:.1f}%" for w in weights],
+            textposition='outside'
+        ))
+    fig.update_layout(
+        barmode='group', height=400, template='plotly_dark',
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        yaxis_title="Allocation (%)", margin=dict(l=0, r=0, t=10, b=0)
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+# ===== TAB 4 : VALIDATION =====
+with tab4:
+    st.markdown("<div class='section-title'>🔬 Validation In-Sample / Out-of-Sample</div>", unsafe_allow_html=True)
+    
+    with st.spinner("Calcul de la validation..."):
+        try:
+            val_results, train, test = in_out_validation(returns_df, train_ratio=0.7)
+            
+            st.markdown(f"**In-Sample** : {train.index[0].strftime('%Y-%m-%d')} → {train.index[-1].strftime('%Y-%m-%d')} ({len(train)} jours)")
+            st.markdown(f"**Out-of-Sample** : {test.index[0].strftime('%Y-%m-%d')} → {test.index[-1].strftime('%Y-%m-%d')} ({len(test)} jours)")
+            st.markdown("---")
+            
+            for name, res in val_results.items():
+                st.markdown(f"### 🎯 {name}")
+                
+                in_s = res['in_sample']
+                out_s = res['out_of_sample']
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Sharpe In-Sample", f"{in_s['sharpe']:.3f}")
+                with col2:
+                    st.metric("Sharpe Out-of-Sample", f"{out_s['sharpe']:.3f}")
+                with col3:
+                    st.metric("Ratio Out/In", f"{res['sharpe_ratio_out_in']:.2f}")
+                
+                ratio = res['sharpe_ratio_out_in']
+                if ratio > 0.7:
+                    st.success("✅ Modèle ROBUSTE (peu de sur-apprentissage)")
+                elif ratio > 0.4:
+                    st.warning("⚠️ Modèle MOYENNEMENT robuste")
+                else:
+                    st.error("❌ Modèle a probablement SUR-APPRIS")
+                
+                st.markdown("---")
+        except Exception as e:
+            st.error(f"❌ Erreur: {e}")
+
+
+# ===== TAB 5 : BENCHMARK =====
+with tab5:
+    st.markdown("<div class='section-title'>📊 Comparaison avec le benchmark</div>", unsafe_allow_html=True)
+    
+    with st.spinner("Calcul du benchmark..."):
+        try:
+            spy_prices = load_portfolio(["US_SPY"])
+            
+            if spy_prices is not None and not spy_prices.empty:
+                spy_returns = np.log(spy_prices / spy_prices.shift(1)).dropna()['US_SPY']
+                weights = portfolio_metrics['max_sharpe']
+                port_returns = returns_df.dot(weights)
+                
+                bench_metrics = calculate_all_benchmark_metrics(port_returns, spy_returns)
+                
+                if bench_metrics:
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("### Portefeuille")
+                        st.metric("Rendement annualisé", f"{bench_metrics['portfolio']['return_ann']*100:+.2f}%")
+                        st.metric("Volatilité", f"{bench_metrics['portfolio']['volatility_ann']*100:.2f}%")
+                        st.metric("Sharpe", f"{bench_metrics['portfolio']['sharpe']:.3f}")
+                    
+                    with col2:
+                        st.markdown("### S&P 500")
+                        st.metric("Rendement annualisé", f"{bench_metrics['benchmark']['return_ann']*100:+.2f}%")
+                        st.metric("Volatilité", f"{bench_metrics['benchmark']['volatility_ann']*100:.2f}%")
+                        st.metric("Sharpe", f"{bench_metrics['benchmark']['sharpe']:.3f}")
+                    
+                    st.markdown("---")
+                    st.markdown("### Métriques de comparaison")
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Alpha", f"{bench_metrics['alpha']*100:+.2f}%")
+                    with col2:
+                        st.metric("Beta", f"{bench_metrics['beta']:.3f}")
+                    with col3:
+                        st.metric("Information Ratio", f"{bench_metrics['information_ratio']:.3f}")
+                    with col4:
+                        st.metric("Tracking Error", f"{bench_metrics['tracking_error']*100:.2f}%")
+                else:
+                    st.warning("Pas assez de données communes")
+            else:
+                st.warning("SPY non disponible")
+        except Exception as e:
+            st.error(f"❌ Erreur: {e}")
+
+
+# ===== TAB 6 : STRESS TESTS =====
+with tab6:
+    st.markdown("<div class='section-title'>💥 Stress Tests</div>", unsafe_allow_html=True)
+    
+    try:
+        weights = portfolio_metrics['max_sharpe']
+        results = run_all_stress_tests(returns_df, weights, capital=100000)
+        
+        for r in results:
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                st.markdown(f"### {r['name']}")
+            with col2:
+                st.markdown(f"*{r['description']}*")
+                if "loss_pct" in r:
+                    st.metric("Perte potentielle", f"{r['loss_pct']:.2f}%",
+                              f"{r.get('loss_absolute', 0):,.0f} FCFA")
+                if "var_stressee" in r:
+                    st.metric("VaR 95% stressée", f"{r['var_stressee']:.2f}%")
+                if "augmentation" in r:
+                    st.metric("Augmentation volatilité", f"+{r['augmentation']:.1f}%")
+            st.markdown("---")
+    except Exception as e:
+        st.error(f"❌ Erreur: {e}")
+
+
+# ===== TAB 7 : CONTRIBUTION =====
+with tab7:
+    st.markdown("<div class='section-title'>📉 Contribution au risque</div>", unsafe_allow_html=True)
+    
+    try:
+        weights = portfolio_metrics['risk_parity']
+        rc = calculate_risk_contribution(returns_df, weights)
+        
+        contrib_df = pd.DataFrame({
+            "Actif": selected,
+            "Poids (%)": rc['weights'] * 100,
+            "Contribution au risque (%)": rc['risk_contribution_normalized'],
+        })
+        
+        fig = go.Figure()
+        fig.add_trace(go.Bar(name="Poids", x=contrib_df['Actif'],
+                             y=contrib_df['Poids (%)'], marker_color='#c9a227'))
+        fig.add_trace(go.Bar(name="Contribution", x=contrib_df['Actif'],
+                             y=contrib_df['Contribution au risque (%)'],
+                             marker_color='#f87171'))
+        fig.update_layout(
+            barmode='group', height=400, template='plotly_dark',
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            yaxis_title="%", margin=dict(l=0, r=0, t=10, b=0)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        st.dataframe(contrib_df, use_container_width=True, hide_index=True)
+        st.markdown(f"**Volatilité du portefeuille** : {rc['portfolio_volatility']*100:.2f}%")
+    except Exception as e:
+        st.error(f"❌ Erreur: {e}")
+
 
 # ============================================================
 # FOOTER
