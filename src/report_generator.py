@@ -1,6 +1,11 @@
 """
 Génération de rapport PDF professionnel - Version condensée
 """
+from reportlab.platypus import Image as RLImage
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import io as io_module
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
@@ -12,7 +17,62 @@ from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 from datetime import datetime
 import pandas as pd
 import numpy as np
+def create_price_chart(prices_df, portfolio_prices):
+    """Crée un graphique de l'évolution du portefeuille"""
+    fig, ax = plt.subplots(figsize=(8, 3.5))
+    
+    # Portfolio normalisé
+    portfolio_norm = portfolio_prices / portfolio_prices.iloc[0] * 100
+    ax.plot(portfolio_norm.index, portfolio_norm.values,
+            color='#c9a227', linewidth=2.5, label='Portefeuille')
+    
+    # Quelques actifs
+    for i, col in enumerate(prices_df.columns[:3]):
+        asset_norm = prices_df[col] / prices_df[col].iloc[0] * 100
+        ax.plot(asset_norm.index, asset_norm.values,
+                linewidth=1, alpha=0.6, label=col)
+    
+    ax.set_facecolor('#0a3d2e')
+    ax.set_title('Évolution du portefeuille vs actifs', color='white', fontsize=12, fontweight='bold')
+    ax.tick_params(colors='white')
+    ax.grid(True, alpha=0.2, color='white')
+    ax.legend(loc='upper left', fontsize=8, facecolor='#0a3d2e', labelcolor='white')
+    
+    plt.tight_layout()
+    
+    buf = io_module.BytesIO()
+    plt.savefig(buf, format='png', dpi=100, facecolor='#0a3d2e')
+    buf.seek(0)
+    plt.close()
+    return buf
 
+
+def create_distribution_chart(portfolio_returns):
+    """Crée un histogramme des rendements avec VaR"""
+    fig, ax = plt.subplots(figsize=(8, 3.5))
+    
+    ax.hist(portfolio_returns, bins=50, color='#c9a227', alpha=0.7, edgecolor='white', linewidth=0.5)
+    
+    # VaR
+    var_95 = np.percentile(portfolio_returns, 5)
+    var_99 = np.percentile(portfolio_returns, 1)
+    
+    ax.axvline(var_95, color='#f59e0b', linestyle='--', linewidth=2, label=f'VaR 95% ({var_95*100:.2f}%)')
+    ax.axvline(var_99, color='#ef4444', linestyle='--', linewidth=2, label=f'VaR 99% ({var_99*100:.2f}%)')
+    
+    ax.set_facecolor('#0a3d2e')
+    ax.set_title('Distribution des rendements', color='white', fontsize=12, fontweight='bold')
+    ax.tick_params(colors='white')
+    ax.grid(True, alpha=0.2, color='white')
+    ax.legend(loc='upper left', fontsize=8, facecolor='#0a3d2e', labelcolor='white')
+    
+    plt.tight_layout()
+    
+    buf = io_module.BytesIO()
+    plt.savefig(buf, format='png', dpi=100, facecolor='#0a3d2e')
+    buf.seek(0)
+    plt.close()
+    return buf
 
 def generate_pdf_report(
     output_path,
@@ -103,7 +163,15 @@ def generate_pdf_report(
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
     ]))
     elements.append(perf_table)
+        # Graphique évolution
+    elements.append(Spacer(1, 0.5*cm))
+    chart1 = create_price_chart(prices_df, portfolio_prices)
+    elements.append(RLImage(chart1, width=17*cm, height=7.5*cm))
     
+    # Graphique distribution
+    elements.append(Spacer(1, 0.5*cm))
+    chart2 = create_distribution_chart(portfolio_returns)
+    elements.append(RLImage(chart2, width=17*cm, height=7.5*cm))
     # ===== SECTION 2 : ALLOCATION =====
     elements.append(Paragraph("2. Allocation optimale (Markowitz)", heading_style))
     
