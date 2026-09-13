@@ -258,36 +258,46 @@ def generate_pdf_report(
     try:
         from risk_contribution import calculate_risk_contribution
         
-        weights = optimal_portfolios['risk_parity']
-        rc = calculate_risk_contribution(returns_df, weights)
+        weights = np.array(optimal_portfolios['risk_parity']).flatten()
         
-        contrib_data = [["Actif", "Poids", "Contribution", "Ratio"]]
-        for i, asset in enumerate(assets):
-            poids = rc['weights'][i] * 100
-            contrib = rc['risk_contribution_normalized'][i]
-            ratio = contrib / poids if poids != 0 else 0
-            ind = "⚠️" if ratio > 1.2 else "✅" if ratio < 0.8 else "⚪"
+        # Vérifier que les tailles correspondent
+        if len(weights) == len(returns_df.columns):
+            rc = calculate_risk_contribution(returns_df, weights)
             
-            contrib_data.append([
-                asset, f"{poids:.1f}%", f"{contrib:.1f}%", f"{ratio:.2f} {ind}"
-            ])
-        
-        contrib_table = Table(contrib_data, colWidths=[4.5*cm, 3.5*cm, 3.5*cm, 3.5*cm])
-        contrib_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#a855f7')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('PADDING', (0, 0), (-1, -1), 5),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
-            ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
-        ]))
-        elements.append(contrib_table)
-        elements.append(Spacer(1, 0.3*cm))
-        elements.append(Paragraph(
-            "⚠️ Amplificateur de risque · ✅ Diversificateur · ⚪ Équilibré",
-            body_style
-        ))
+            if rc:
+                contrib_data = [["Actif", "Poids", "Contribution", "Ratio"]]
+                for i, asset in enumerate(assets):
+                    if i >= len(rc['weights']):
+                        break
+                    poids = rc['weights'][i] * 100
+                    contrib = rc['risk_contribution_normalized'][i]
+                    ratio = contrib / poids if poids != 0 else 0
+                    ind = "⚠️" if ratio > 1.2 else "✅" if ratio < 0.8 else "⚪"
+                    
+                    contrib_data.append([
+                        asset, f"{poids:.1f}%", f"{contrib:.1f}%", f"{ratio:.2f} {ind}"
+                    ])
+                
+                contrib_table = Table(contrib_data, colWidths=[4.5*cm, 3.5*cm, 3.5*cm, 3.5*cm])
+                contrib_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#a855f7')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 9),
+                    ('PADDING', (0, 0), (-1, -1), 5),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+                    ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ]))
+                elements.append(contrib_table)
+                elements.append(Spacer(1, 0.3*cm))
+                elements.append(Paragraph(
+                    "⚠️ Amplificateur de risque · ✅ Diversificateur · ⚪ Équilibré",
+                    body_style
+                ))
+            else:
+                elements.append(Paragraph("Contribution non calculable", body_style))
+        else:
+            elements.append(Paragraph(f"Taille incompatible : {len(weights)} poids vs {len(returns_df.columns)} actifs", body_style))
     except Exception as e:
         elements.append(Paragraph(f"Contribution non disponible: {e}", body_style))
     
