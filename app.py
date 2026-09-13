@@ -439,7 +439,7 @@ with tab1:
         xaxis=dict(showgrid=False),
         yaxis=dict(showgrid=True, gridcolor='rgba(201,162,39,0.1)')
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 with tab2:
     col1, col2 = st.columns(2)
@@ -454,14 +454,14 @@ with tab2:
             opacity=0.8
         ))
         fig.update_layout(height=400, template='plotly_dark', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     with col2:
         st.markdown("<div class='section-title'>🔗 Corrélation</div>", unsafe_allow_html=True)
         corr = returns_df.corr()
         fig = px.imshow(corr, text_auto='.2f', color_continuous_scale='YlOrBr', zmin=-1, zmax=1)
         fig.update_layout(height=400, template='plotly_dark', paper_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 with tab3:
     st.markdown("<div class='section-title'>🎯 Portefeuilles optimaux</div>", unsafe_allow_html=True)
