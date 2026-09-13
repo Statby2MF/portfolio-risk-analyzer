@@ -4,8 +4,13 @@ Validation in-sample / out-of-sample et walk-forward
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
+import sys
+import os
 
-from src.portfolio_optimizer import (
+# Ajouter le dossier parent pour les imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from portfolio_optimizer import (
     optimize_max_sharpe,
     optimize_min_volatility,
     optimize_risk_parity,
@@ -13,7 +18,7 @@ from src.portfolio_optimizer import (
     portfolio_volatility,
     portfolio_sharpe
 )
-from src.risk_metrics import calculate_all_metrics
+from risk_metrics import calculate_all_metrics
 
 
 def split_in_out(returns_df, train_ratio=0.7):
