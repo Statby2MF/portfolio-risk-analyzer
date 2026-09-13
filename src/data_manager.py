@@ -39,22 +39,39 @@ def load_asset(symbol, start_date=None, end_date=None):
         return None
     
     try:
-        df = pd.read_csv(filepath, index_col=0, parse_dates=True)
+        df = pd.read_csv(filepath)
         
-        if "Close" not in df.columns:
+        # Identifier la colonne de date (première colonne)
+        date_col = df.columns[0]
+        df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+        df = df.set_index(date_col)
+        df = df[~df.index.isna()]
+        
+        # Trouver la colonne de prix
+        if "Close" in df.columns:
+            prices = pd.to_numeric(df["Close"], errors='coerce')
+        else:
             numeric_cols = df.select_dtypes(include=[np.number]).columns
-            if len(numeric_cols) > 0:
-                df = df[[numeric_cols[0]]]
-                df.columns = ["Close"]
-            else:
+            if len(numeric_cols) == 0:
                 return None
+            prices = pd.to_numeric(df[numeric_cols[0]], errors='coerce')
         
-        if start_date:
-            df = df[df.index >= start_date]
-        if end_date:
-            df = df[df.index <= end_date]
+        # Nettoyer
+        prices = prices.dropna()
+        prices = prices[~prices.index.isna()]
         
-        return df["Close"]
+        # Trier par date
+        prices = prices.sort_index()
+        
+        # Filtrer par date
+        if start_date is not None:
+            start_date = pd.to_datetime(start_date)
+            prices = prices[prices.index >= start_date]
+        if end_date is not None:
+            end_date = pd.to_datetime(end_date)
+            prices = prices[prices.index <= end_date]
+        
+        return prices
     except Exception as e:
         print(f"❌ Erreur lecture {symbol}: {e}")
         return None
