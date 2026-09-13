@@ -66,6 +66,13 @@ def download_us_stock(symbol, period="5y"):
             return None
         
         df = data[["Close"]].copy()
+        # S'assurer que l'index est bien un DatetimeIndex
+        df.index = pd.to_datetime(df.index)
+        df.index.name = "Date"
+        # Convertir les prix en numérique
+        df["Close"] = pd.to_numeric(df["Close"], errors='coerce')
+        df = df.dropna()
+        
         filepath = f"{DATA_DIR}/US_{symbol}.csv"
         df.to_csv(filepath)
         return df
