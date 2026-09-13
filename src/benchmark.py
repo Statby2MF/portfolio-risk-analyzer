@@ -5,7 +5,11 @@ Alpha, Beta, Information Ratio, Tracking Error
 import numpy as np
 import pandas as pd
 from scipy import stats
+import sys
+import os
 
+# Ajouter le dossier parent au chemin
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def calculate_alpha_beta(portfolio_returns, benchmark_returns, risk_free_rate=0.02):
     """
@@ -247,8 +251,8 @@ if __name__ == "__main__":
     import os
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
-    from data_manager import load_portfolio
-    from portfolio_optimizer import optimize_max_sharpe
+        from src.data_manager import load_portfolio
+    from src.portfolio_optimizer import optimize_max_sharpe
     
     # Charger les données
     assets = ["BRVM_SNTS", "BRVM_ORAC", "BRVM_SGBC", "BRVM_ECOC"]
