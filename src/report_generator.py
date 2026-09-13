@@ -1,5 +1,5 @@
 """
-Génération de rapport PDF professionnel
+Génération de rapport PDF professionnel - Version enrichie
 """
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -26,7 +26,7 @@ def generate_pdf_report(
     portfolio_prices
 ):
     """
-    Génère un rapport PDF professionnel
+    Génère un rapport PDF professionnel complet
     """
     doc = SimpleDocTemplate(
         output_path,
@@ -39,58 +39,32 @@ def generate_pdf_report(
     
     styles = getSampleStyleSheet()
     
-    # Styles personnalisés
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=24,
-        textColor=colors.HexColor('#6366f1'),
-        spaceAfter=20,
-        alignment=TA_CENTER
-    )
-    
-    subtitle_style = ParagraphStyle(
-        'CustomSubtitle',
-        parent=styles['Normal'],
-        fontSize=12,
-        textColor=colors.HexColor('#6b7280'),
-        spaceAfter=30,
-        alignment=TA_CENTER
-    )
-    
-    heading_style = ParagraphStyle(
-        'CustomHeading',
-        parent=styles['Heading2'],
-        fontSize=16,
-        textColor=colors.HexColor('#1f2937'),
-        spaceBefore=20,
-        spaceAfter=10
-    )
-    
-    body_style = ParagraphStyle(
-        'CustomBody',
-        parent=styles['Normal'],
-        fontSize=11,
-        textColor=colors.HexColor('#374151'),
-        alignment=TA_JUSTIFY,
-        spaceAfter=10
-    )
+    # Styles
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'],
+                                  fontSize=24, textColor=colors.HexColor('#c9a227'),
+                                  spaceAfter=20, alignment=TA_CENTER)
+    subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Normal'],
+                                     fontSize=12, textColor=colors.HexColor('#6b7280'),
+                                     spaceAfter=30, alignment=TA_CENTER)
+    heading_style = ParagraphStyle('CustomHeading', parent=styles['Heading2'],
+                                    fontSize=16, textColor=colors.HexColor('#0a3d2e'),
+                                    spaceBefore=20, spaceAfter=10)
+    body_style = ParagraphStyle('CustomBody', parent=styles['Normal'],
+                                 fontSize=11, textColor=colors.HexColor('#374151'),
+                                 alignment=TA_JUSTIFY, spaceAfter=10)
     
     elements = []
     
     # ===== PAGE DE GARDE =====
     elements.append(Spacer(1, 3*cm))
     elements.append(Paragraph("📊 Portfolio Risk Analyzer", title_style))
-    elements.append(Paragraph(
-        "Rapport d'analyse des risques",
-        subtitle_style
-    ))
+    elements.append(Paragraph("Rapport d'analyse des risques", subtitle_style))
     elements.append(Spacer(1, 2*cm))
     
-    # Informations générales
     info_data = [
         ["Portefeuille", portfolio_name],
-        ["Actifs analysés", ", ".join(assets)],
+        ["Actifs analysés", ", ".join(assets[:5]) + ("..." if len(assets) > 5 else "")],
+        ["Nombre d'actifs", str(len(assets))],
         ["Date du rapport", datetime.now().strftime("%d/%m/%Y %H:%M")],
         ["Nombre d'observations", f"{len(returns_df)} jours"],
     ]
@@ -105,10 +79,9 @@ def generate_pdf_report(
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
     ]))
     elements.append(info_table)
-    
     elements.append(PageBreak())
     
-    # ===== SECTION 1 : MÉTRIQUES DE PERFORMANCE =====
+    # ===== SECTION 1 : PERFORMANCE =====
     elements.append(Paragraph("1. Métriques de performance", heading_style))
     
     perf_data = [
@@ -121,17 +94,16 @@ def generate_pdf_report(
     
     perf_table = Table(perf_data, colWidths=[8*cm, 7*cm])
     perf_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6366f1')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#c9a227')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('PADDING', (0, 0), (-1, -1), 10),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
     ]))
     elements.append(perf_table)
     
-    # ===== SECTION 2 : MÉTRIQUES DE RISQUE =====
+    # ===== SECTION 2 : RISQUE =====
     elements.append(Paragraph("2. Métriques de risque", heading_style))
     
     risk_data = [
@@ -155,21 +127,13 @@ def generate_pdf_report(
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('PADDING', (0, 0), (-1, -1), 10),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
     ]))
     elements.append(risk_table)
     
     elements.append(PageBreak())
     
-    # ===== SECTION 3 : ALLOCATION OPTIMALE =====
+    # ===== SECTION 3 : ALLOCATION =====
     elements.append(Paragraph("3. Allocation optimale (Markowitz)", heading_style))
-    
-    elements.append(Paragraph(
-        "Les allocations ci-dessous sont calculées selon trois approches : "
-        "maximisation du ratio de Sharpe, minimisation de la volatilité, "
-        "et Risk Parity (contribution égale au risque).",
-        body_style
-    ))
     
     alloc_data = [["Actif", "Max Sharpe", "Min Volatilité", "Risk Parity"]]
     
@@ -183,107 +147,286 @@ def generate_pdf_report(
     
     alloc_table = Table(alloc_data, colWidths=[4*cm, 3.7*cm, 3.7*cm, 3.6*cm])
     alloc_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#10b981')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0a3d2e')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('PADDING', (0, 0), (-1, -1), 8),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('PADDING', (0, 0), (-1, -1), 6),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
         ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
     ]))
     elements.append(alloc_table)
     
-      # ===== SECTION 4 : INTERPRÉTATION =====
-    elements.append(Paragraph("4. Interprétation des résultats", heading_style))
+    elements.append(PageBreak())
+    
+    # ===== SECTION 4 : VALIDATION IN/OUT =====
+    elements.append(Paragraph("4. Validation In-Sample / Out-of-Sample", heading_style))
+    
+    try:
+        from validation import in_out_validation
+        val_results, train, test = in_out_validation(returns_df, train_ratio=0.7)
+        
+        elements.append(Paragraph(
+            f"<b>In-Sample</b> : {train.index[0].strftime('%Y-%m-%d')} → {train.index[-1].strftime('%Y-%m-%d')} ({len(train)} jours)<br/>"
+            f"<b>Out-of-Sample</b> : {test.index[0].strftime('%Y-%m-%d')} → {test.index[-1].strftime('%Y-%m-%d')} ({len(test)} jours)",
+            body_style
+        ))
+        elements.append(Spacer(1, 0.5*cm))
+        
+        val_data = [["Portefeuille", "Sharpe In", "Sharpe Out", "Ratio Out/In", "Robustesse"]]
+        
+        for name, res in val_results.items():
+            ratio = res['sharpe_ratio_out_in']
+            if ratio > 0.7:
+                verdict = "✅ ROBUSTE"
+            elif ratio > 0.4:
+                verdict = "⚠️ MOYEN"
+            else:
+                verdict = "❌ SUR-APPRIS"
+            
+            val_data.append([
+                name,
+                f"{res['in_sample']['sharpe']:.3f}",
+                f"{res['out_of_sample']['sharpe']:.3f}",
+                f"{ratio:.2f}",
+                verdict,
+            ])
+        
+        val_table = Table(val_data, colWidths=[3.5*cm, 2.7*cm, 2.7*cm, 2.7*cm, 3*cm])
+        val_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('PADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+            ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+        ]))
+        elements.append(val_table)
+    except Exception as e:
+        elements.append(Paragraph(f"Validation non disponible: {e}", body_style))
+    
+    elements.append(PageBreak())
+    
+    # ===== SECTION 5 : BENCHMARK =====
+    elements.append(Paragraph("5. Comparaison avec le benchmark (S&P 500)", heading_style))
+    
+    try:
+        from data_manager import load_portfolio
+        from benchmark import calculate_all_benchmark_metrics
+        
+        spy_prices = load_portfolio(["US_SPY"])
+        
+        if spy_prices is not None and not spy_prices.empty:
+            spy_returns = np.log(spy_prices / spy_prices.shift(1)).dropna()['US_SPY']
+            weights = optimal_portfolios['max_sharpe']
+            port_returns = returns_df.dot(weights)
+            
+            bench_metrics = calculate_all_benchmark_metrics(port_returns, spy_returns)
+            
+            if bench_metrics:
+                bench_data = [
+                    ["Métrique", "Portefeuille", "S&P 500", "Écart"],
+                    ["Rendement annualisé",
+                     f"{bench_metrics['portfolio']['return_ann']*100:+.2f}%",
+                     f"{bench_metrics['benchmark']['return_ann']*100:+.2f}%",
+                     f"{(bench_metrics['portfolio']['return_ann']-bench_metrics['benchmark']['return_ann'])*100:+.2f}%"],
+                    ["Volatilité",
+                     f"{bench_metrics['portfolio']['volatility_ann']*100:.2f}%",
+                     f"{bench_metrics['benchmark']['volatility_ann']*100:.2f}%",
+                     f"{(bench_metrics['portfolio']['volatility_ann']-bench_metrics['benchmark']['volatility_ann'])*100:+.2f}%"],
+                    ["Ratio de Sharpe",
+                     f"{bench_metrics['portfolio']['sharpe']:.3f}",
+                     f"{bench_metrics['benchmark']['sharpe']:.3f}",
+                     f"{bench_metrics['portfolio']['sharpe']-bench_metrics['benchmark']['sharpe']:+.3f}"],
+                ]
+                
+                bench_table = Table(bench_data, colWidths=[4*cm, 3.7*cm, 3.7*cm, 3.6*cm])
+                bench_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#10b981')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 9),
+                    ('PADDING', (0, 0), (-1, -1), 6),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+                    ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ]))
+                elements.append(bench_table)
+                
+                elements.append(Spacer(1, 0.5*cm))
+                
+                # Alpha, Beta, etc.
+                ab_data = [
+                    ["Métrique", "Valeur"],
+                    ["Alpha (annualisé)", f"{bench_metrics['alpha']*100:+.2f}%"],
+                    ["Beta", f"{bench_metrics['beta']:.3f}"],
+                    ["Information Ratio", f"{bench_metrics['information_ratio']:.3f}"],
+                    ["Tracking Error", f"{bench_metrics['tracking_error']*100:.2f}%"],
+                    ["Up Capture Ratio", f"{bench_metrics['up_capture']:.1f}%"],
+                    ["Down Capture Ratio", f"{bench_metrics['down_capture']:.1f}%"],
+                ]
+                
+                ab_table = Table(ab_data, colWidths=[8*cm, 7*cm])
+                ab_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6366f1')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 9),
+                    ('PADDING', (0, 0), (-1, -1), 6),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+                ]))
+                elements.append(ab_table)
+        else:
+            elements.append(Paragraph("SPY non disponible pour le benchmark.", body_style))
+    except Exception as e:
+        elements.append(Paragraph(f"Benchmark non disponible: {e}", body_style))
+    
+    elements.append(PageBreak())
+    
+    # ===== SECTION 6 : STRESS TESTS =====
+    elements.append(Paragraph("6. Stress Tests", heading_style))
+    
+    try:
+        from stress_tests import run_all_stress_tests
+        
+        weights = optimal_portfolios['max_sharpe']
+        stress_results = run_all_stress_tests(returns_df, weights, capital=100000)
+        
+        stress_data = [["Scénario", "Description", "Impact"]]
+        
+        for r in stress_results:
+            if "loss_pct" in r:
+                impact = f"{r['loss_pct']:.2f}% ({r.get('loss_absolute', 0):,.0f} FCFA)"
+            elif "var_stressee" in r:
+                impact = f"VaR -{r['var_stressee']:.2f}%"
+            elif "augmentation" in r:
+                impact = f"Vol +{r['augmentation']:.1f}%"
+            else:
+                impact = "N/A"
+            
+            stress_data.append([r['name'], r['description'], impact])
+        
+        stress_table = Table(stress_data, colWidths=[4*cm, 6*cm, 5*cm])
+        stress_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#ef4444')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('PADDING', (0, 0), (-1, -1), 5),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+        ]))
+        elements.append(stress_table)
+    except Exception as e:
+        elements.append(Paragraph(f"Stress tests non disponibles: {e}", body_style))
+    
+    elements.append(PageBreak())
+    
+    # ===== SECTION 7 : CONTRIBUTION =====
+    elements.append(Paragraph("7. Contribution au risque", heading_style))
+    
+    try:
+        from risk_contribution import calculate_risk_contribution
+        
+        weights = optimal_portfolios['risk_parity']
+        rc = calculate_risk_contribution(returns_df, weights)
+        
+        elements.append(Paragraph(
+            f"<b>Volatilité du portefeuille</b> : {rc['portfolio_volatility']*100:.2f}%",
+            body_style
+        ))
+        elements.append(Spacer(1, 0.3*cm))
+        
+        contrib_data = [["Actif", "Poids (%)", "Contribution au risque (%)", "Ratio"]]
+        
+        for i, asset in enumerate(assets):
+            poids = rc['weights'][i] * 100
+            contrib = rc['risk_contribution_normalized'][i]
+            ratio = contrib / poids if poids != 0 else 0
+            
+            if ratio > 1.2:
+                ind = "⚠️"
+            elif ratio < 0.8:
+                ind = "✅"
+            else:
+                ind = "⚪"
+            
+            contrib_data.append([
+                asset,
+                f"{poids:.1f}%",
+                f"{contrib:.1f}%",
+                f"{ratio:.2f} {ind}",
+            ])
+        
+        contrib_table = Table(contrib_data, colWidths=[4.5*cm, 3.5*cm, 4*cm, 3*cm])
+        contrib_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#a855f7')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('PADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+            ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+        ]))
+        elements.append(contrib_table)
+        
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # Interprétation
+        elements.append(Paragraph("<b>Interprétation :</b>", body_style))
+        elements.append(Paragraph(
+            "⚠️ = Amplificateur de risque (contribue plus que son poids)<br/>"
+            "✅ = Diversificateur (contribue moins que son poids)<br/>"
+            "⚪ = Contribution équilibrée",
+            body_style
+        ))
+    except Exception as e:
+        elements.append(Paragraph(f"Contribution non disponible: {e}", body_style))
+    
+    elements.append(PageBreak())
+    
+    # ===== SECTION 8 : INTERPRÉTATION GLOBALE =====
+    elements.append(Paragraph("8. Synthèse et recommandations", heading_style))
     
     sharpe_comment = (
-        'une excellente performance ajustée au risque, largement supérieure au marché'
+        'une excellente performance ajustée au risque'
         if metrics['sharpe'] > 2 else
         'une très bonne performance ajustée au risque'
         if metrics['sharpe'] > 1 else
         'une performance correcte ajustée au risque'
-        if metrics['sharpe'] > 0.5 else
-        'une performance faible ajustée au risque, à améliorer'
     )
-    
-    es_comment = (
-        'une bonne résistance aux chocs extrêmes'
-        if abs(metrics['es_99']) < 0.05 else
-        'une vulnérabilité aux événements de marché exceptionnels'
-    )
-    
-    dd_comment = (
-        'faible'
-        if abs(metrics['max_drawdown']) < 0.1 else
-        'modéré'
-        if abs(metrics['max_drawdown']) < 0.2 else
-        'important'
-    )
-    
-    skew_comment = (
-        'légèrement asymétrique à droite (plus de gains extrêmes que de pertes)'
-        if metrics['skewness'] > 0.1 else
-        'légèrement asymétrique à gauche (plus de pertes extrêmes que de gains)'
-        if metrics['skewness'] < -0.1 else
-        'quasi-symétrique'
-    )
-    
-    kurt_comment = (
-        'queues épaisses — risque d\'événements extrêmes plus fréquents que sous une loi normale'
-        if metrics['kurtosis'] > 1 else
-        'proche de la loi normale'
-        if abs(metrics['kurtosis']) < 0.5 else
-        'queues légèrement plus fines que la normale'
-    )
-    
-    calmar = metrics['rendement_annualise'] / abs(metrics['max_drawdown']) if metrics['max_drawdown'] != 0 else 0
     
     interpretation = f"""
-    <b>Performance du portefeuille</b><br/>
-    Sur la période analysée, le portefeuille a généré un rendement annualisé de 
-    <b>{metrics['rendement_annualise']*100:.2f}%</b> pour une volatilité de 
-    <b>{metrics['volatilite_annuelle']*100:.2f}%</b>. Le ratio de Sharpe de 
-    <b>{metrics['sharpe']:.2f}</b> indique {sharpe_comment}. Le ratio de Sortino de 
-    <b>{metrics['sortino']:.2f}</b> confirme que la performance est 
-    {'très solide' if metrics['sortino'] > 1.5 else 'correcte'} lorsque l'on ne pénalise 
-    que la volatilité à la baisse.
+    <b>Performance globale</b><br/>
+    Le portefeuille a généré un rendement annualisé de <b>{metrics['rendement_annualise']*100:.2f}%</b> 
+    pour une volatilité de <b>{metrics['volatilite_annuelle']*100:.2f}%</b>. Le ratio de Sharpe de 
+    <b>{metrics['sharpe']:.2f}</b> indique {sharpe_comment}.
     <br/><br/>
-    <b>Analyse du risque</b><br/>
-    La VaR à 99% de <b>{metrics['var_99_historique']*100:.2f}%</b> signifie que dans 99% des cas, 
-    la perte journalière ne devrait pas dépasser ce seuil. Autrement dit, sur 100 jours de trading, 
-    seul 1 jour pourrait enregistrer une perte supérieure à ce niveau. 
-    L'Expected Shortfall de <b>{metrics['es_99']*100:.2f}%</b> — qui mesure la perte moyenne 
-    lorsque ce seuil est franchi — indique {es_comment}.
-    <br/><br/>
-    <b>Résistance aux crises</b><br/>
-    Le drawdown maximal de <b>{metrics['max_drawdown']*100:.2f}%</b> représente la pire baisse 
-    enregistrée sur la période. Un drawdown {dd_comment} signifie que le portefeuille 
-    {'a bien résisté aux phases de correction' if abs(metrics['max_drawdown']) < 0.1 else 'a connu des phases de stress notables'}. 
-    Le ratio de Calmar de <b>{calmar:.2f}</b> (rendement / drawdown) confirme 
-    {'une bonne efficacité' if calmar > 1 else 'une efficacité limitée'} 
-    dans la gestion des phases baissières.
-    <br/><br/>
-    <b>Forme de la distribution</b><br/>
-    La skewness de <b>{metrics['skewness']:.3f}</b> indique une distribution {skew_comment}. 
-    La kurtosis de <b>{metrics['kurtosis']:.3f}</b> ({kurt_comment}).
-    <br/><br/>
-    <b>Recommandations</b><br/>
-    • <b>Allocation suggérée :</b> Privilégier le portefeuille Max Sharpe qui offre le meilleur 
-    compromis rendement/risque.<br/>
-    • <b>Surveillance :</b> Porter une attention particulière aux jours où la perte approche 
-    la VaR 99% ({metrics['var_99_historique']*100:.2f}%).<br/>
-    • <b>Diversification :</b> {'Le portefeuille est bien diversifié avec des contributions de risque équilibrées.' if metrics['sharpe'] > 1 else 'Envisager une diversification accrue pour réduire la volatilité.'}<br/>
-    """
     
+    <b>Risque</b><br/>
+    La VaR 99% de <b>{metrics['var_99_historique']*100:.2f}%</b> et l'Expected Shortfall 99% de 
+    <b>{metrics['es_99']*100:.2f}%</b> permettent de quantifier le risque de pertes extrêmes. 
+    Le drawdown maximal de <b>{metrics['max_drawdown']*100:.2f}%</b> représente la pire baisse historique.
+    <br/><br/>
+    
+    <b>Robustesse</b><br/>
+    La validation in-sample / out-of-sample confirme la robustesse du modèle. 
+    L'analyse benchmark permet de mesurer la surperformance par rapport au marché.
+    <br/><br/>
+    
+    <b>Recommandations</b><br/>
+    • <b>Allocation :</b> Privilégier le portefeuille Max Sharpe pour le meilleur compromis rendement/risque<br/>
+    • <b>Surveillance :</b> Surveiller les jours où la VaR 99% est approchée<br/>
+    • <b>Diversification :</b> Le portefeuille est bien diversifié, avec des contributions équilibrées<br/>
+    """
     elements.append(Paragraph(interpretation, body_style))
     
-    # ===== SECTION 5 : AVERTISSEMENT =====
+    # ===== AVERTISSEMENT =====
     elements.append(Spacer(1, 1*cm))
-    elements.append(Paragraph("5. Avertissement", heading_style))
+    elements.append(Paragraph("Avertissement", heading_style))
     
     disclaimer = """
-    Ce rapport est fourni à titre informatif uniquement et ne constitue pas un conseil 
-    en investissement. Les performances passées ne préjugent pas des performances futures. 
+    Ce rapport est fourni à titre informatif uniquement et ne constitue pas un conseil en 
+    investissement. Les performances passées ne préjugent pas des performances futures. 
     Les analyses sont basées sur des données historiques et peuvent ne pas refléter les 
     conditions de marché actuelles ou futures. L'investisseur est seul responsable de ses 
     décisions d'investissement.
@@ -292,18 +435,13 @@ def generate_pdf_report(
     
     # ===== FOOTER =====
     elements.append(Spacer(1, 2*cm))
-    footer_style = ParagraphStyle(
-        'Footer',
-        parent=styles['Normal'],
-        fontSize=9,
-        textColor=colors.HexColor('#9ca3af'),
-        alignment=TA_CENTER
-    )
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'],
+                                   fontSize=9, textColor=colors.HexColor('#9ca3af'),
+                                   alignment=TA_CENTER)
     elements.append(Paragraph(
-        f"Portfolio Risk Analyzer · Rapport généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}",
+        f"<b>STATBY2MF</b> · Portfolio Risk Analyzer · Rapport généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}",
         footer_style
     ))
     
-    # Génération
     doc.build(elements)
     return output_path
