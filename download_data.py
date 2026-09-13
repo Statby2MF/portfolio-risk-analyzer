@@ -122,7 +122,8 @@ def main():
     success_us = 0
     for symbol, name in US_STOCKS.items():
         print(f"📥 {symbol} ({name})...")
-        if download_us_stock(symbol):
+        result = download_us_stock(symbol)
+        if result is not None:
             success_us += 1
     print(f"\n✅ {success_us}/{len(US_STOCKS)} actions US téléchargées")
     
@@ -132,7 +133,8 @@ def main():
     success_brvm = 0
     for ticker, name in BRVM_STOCKS.items():
         print(f"📥 {ticker} ({name})...")
-        if download_brvm_stock(ticker):
+        result = download_brvm_stock(ticker)
+        if result is not None:
             success_brvm += 1
     print(f"\n✅ {success_brvm}/{len(BRVM_STOCKS)} actions BRVM téléchargées")
     
