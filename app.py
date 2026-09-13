@@ -34,7 +34,7 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* ===== FOND GLOBAL - Vert forêt profond ===== */
+    /* ===== FOND GLOBAL ===== */
     .stApp {
         background: linear-gradient(135deg, #0a3d2e 0%, #0d4a38 50%, #0a3d2e 100%);
         color: #f5f0e6;
@@ -69,7 +69,7 @@ st.markdown("""
     }
     
     .main-header p {
-        color: #9c9152;
+        color: #d4c98a;
         font-size: 1rem;
         margin-top: 8px;
         margin-bottom: 0;
@@ -77,8 +77,8 @@ st.markdown("""
     
     /* ===== CARTES MÉTRIQUES ===== */
     .metric-card {
-        background: linear-gradient(135deg, rgba(74,93,58,0.4) 0%, rgba(10,61,46,0.6) 100%);
-        border: 1px solid rgba(201,162,39,0.25);
+        background: linear-gradient(135deg, rgba(74,93,58,0.5) 0%, rgba(10,61,46,0.7) 100%);
+        border: 1px solid rgba(201,162,39,0.3);
         border-radius: 16px;
         padding: 22px 24px;
         transition: all 0.3s ease;
@@ -100,8 +100,8 @@ st.markdown("""
     
     .metric-card:hover {
         transform: translateY(-4px);
-        border-color: rgba(201,162,39,0.6);
-        box-shadow: 0 12px 40px rgba(201,162,39,0.15);
+        border-color: rgba(201,162,39,0.7);
+        box-shadow: 0 12px 40px rgba(201,162,39,0.2);
     }
     
     .metric-card:hover::before {
@@ -109,7 +109,7 @@ st.markdown("""
     }
     
     .metric-label {
-        color: #9c9152;
+        color: #d4c98a;
         font-size: 12px;
         font-weight: 600;
         text-transform: uppercase;
@@ -118,20 +118,20 @@ st.markdown("""
     }
     
     .metric-value {
-        color: #f5f0e6;
+        color: #ffffff;
         font-size: 28px;
         font-weight: 700;
         line-height: 1.1;
         letter-spacing: -0.5px;
     }
     
-    .positive { color: #10b981; }
-    .negative { color: #ef4444; }
+    .positive { color: #4ade80; }
+    .negative { color: #f87171; }
     .neutral { color: #c9a227; }
     
     /* ===== SECTION TITLES ===== */
     .section-title {
-        color: #f5f0e6;
+        color: #ffffff;
         font-size: 1.4rem;
         font-weight: 700;
         margin: 30px 0 20px 0;
@@ -139,16 +139,52 @@ st.markdown("""
         border-left: 4px solid #c9a227;
     }
     
-    /* ===== SIDEBAR ===== */
+    /* ===== SIDEBAR - CONTRASTES AMÉLIORÉS ===== */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0a3d2e 0%, #082e23 100%);
-        border-right: 1px solid rgba(201,162,39,0.2);
+        background: linear-gradient(180deg, #0d4a38 0%, #0a3d2e 100%);
+        border-right: 1px solid rgba(201,162,39,0.3);
+    }
+    
+    /* Tous les textes de la sidebar */
+    [data-testid="stSidebar"] * {
+        color: #f5f0e6 !important;
     }
     
     [data-testid="stSidebar"] h1, 
     [data-testid="stSidebar"] h2, 
-    [data-testid="stSidebar"] h3 {
-        color: #f5f0e6;
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] h4 {
+        color: #c9a227 !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Labels des inputs */
+    [data-testid="stSidebar"] label {
+        color: #d4c98a !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+    }
+    
+    /* Radio buttons */
+    [data-testid="stSidebar"] .stRadio label {
+        color: #f5f0e6 !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Multiselect */
+    [data-testid="stSidebar"] .stMultiSelect label {
+        color: #d4c98a !important;
+    }
+    
+    /* Messages d'info/warning/error dans la sidebar */
+    [data-testid="stSidebar"] .stAlert {
+        background: rgba(201,162,39,0.15) !important;
+        border: 1px solid rgba(201,162,39,0.4) !important;
+        color: #ffffff !important;
+    }
+    
+    [data-testid="stSidebar"] .stAlert p {
+        color: #ffffff !important;
     }
     
     /* ===== BOUTONS ===== */
@@ -167,12 +203,13 @@ st.markdown("""
     .stButton > button:hover {
         transform: translateY(-2px);
         box-shadow: 0 10px 30px rgba(201,162,39,0.4);
+        color: #0a3d2e;
     }
     
     /* ===== ONGLETS ===== */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
-        background: rgba(74,93,58,0.3);
+        background: rgba(74,93,58,0.4);
         padding: 8px;
         border-radius: 12px;
     }
@@ -181,7 +218,7 @@ st.markdown("""
         background: transparent;
         border-radius: 8px;
         padding: 10px 20px;
-        color: #9c9152;
+        color: #d4c98a;
         font-weight: 600;
     }
     
@@ -193,17 +230,28 @@ st.markdown("""
     /* ===== FOOTER ===== */
     .footer {
         text-align: center;
-        color: #4a5d3a;
+        color: #9c9152;
         font-size: 12px;
         padding: 40px 0 20px 0;
         margin-top: 40px;
-        border-top: 1px solid rgba(201,162,39,0.15);
+        border-top: 1px solid rgba(201,162,39,0.2);
     }
     
     .footer .brand {
         color: #c9a227;
         font-weight: 700;
         letter-spacing: 2px;
+    }
+    
+    /* ===== TEXTE GÉNÉRAL ===== */
+    p, span, div {
+        color: #f5f0e6;
+    }
+    
+    /* ===== DATAFRAMES ===== */
+    .dataframe {
+        background: rgba(74,93,58,0.3) !important;
+        color: #f5f0e6 !important;
     }
 </style>
 """, unsafe_allow_html=True)
