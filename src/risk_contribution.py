@@ -8,18 +8,23 @@ import pandas as pd
 def calculate_risk_contribution(returns_df, weights):
     """
     Calcule la contribution de chaque actif au risque total du portefeuille
-    
-    Formule :
-    RC_i = w_i * (Σw)_i / sqrt(w'Σw)
-    
-    où Σ est la matrice de covariance
     """
+    # S'assurer que weights est un array numpy
+    weights = np.array(weights).flatten()
+    
+    # Vérifier la taille
+    if len(weights) != len(returns_df.columns):
+        raise ValueError(f"Taille des poids ({len(weights)}) != nombre d'actifs ({len(returns_df.columns)})")
+    
     # Matrice de covariance annualisée
     cov = returns_df.cov() * 252
     
     # Volatilité du portefeuille
     port_var = weights.T @ cov @ weights
     port_vol = np.sqrt(port_var)
+    
+    if port_vol == 0:
+        return None
     
     # Contribution marginale
     marginal_contrib = cov @ weights
@@ -30,7 +35,7 @@ def calculate_risk_contribution(returns_df, weights):
     # Contribution en pourcentage
     risk_contrib_pct = risk_contrib / port_vol * 100
     
-    # Contribution en pourcentage du total
+    # Contribution normalisée
     risk_contrib_normalized = risk_contrib_pct / risk_contrib_pct.sum() * 100
     
     return {
@@ -40,7 +45,6 @@ def calculate_risk_contribution(returns_df, weights):
         "risk_contribution_normalized": risk_contrib_normalized,
         "portfolio_volatility": port_vol,
     }
-
 
 def contribution_table(returns_df, weights):
     """
