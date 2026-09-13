@@ -113,13 +113,16 @@ def print_contribution_report(returns_df, weights, portfolio_name="Portefeuille"
     
     print()
     
-    # Vérifier si Risk Parity est atteint
-    max_contrib = df['Contribution au risque (%)'].max()
-    min_contrib = df['Contribution au risque (%)'].min()
+        # Vérifier si les contributions sont équilibrées
+    # On regarde si les contributions sont proches les unes des autres
+    contribs = df['Contribution au risque (%)'].values
+    max_contrib = contribs.max()
+    min_contrib = contribs.min()
+    ecart_relatif = (max_contrib - min_contrib) / max_contrib * 100
     
-    if max_contrib - min_contrib < 5:
+    if ecart_relatif < 10:
         print("✅ Le portefeuille est BIEN ÉQUILIBRÉ (contributions proches)")
-    elif max_contrib - min_contrib < 15:
+    elif ecart_relatif < 30:
         print("⚠️ Le portefeuille est MOYENNEMENT équilibré")
     else:
         print("❌ Le portefeuille est DÉSÉQUILIBRÉ (certains actifs dominent le risque)")
