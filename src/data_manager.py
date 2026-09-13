@@ -43,7 +43,11 @@ def load_asset(symbol, start_date=None, end_date=None):
         
         # Identifier la colonne de date (première colonne)
         date_col = df.columns[0]
-        df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+        
+        # ✅ CORRECTION : forcer UTC puis enlever le fuseau
+        df[date_col] = pd.to_datetime(df[date_col], errors='coerce', utc=True)
+        df[date_col] = df[date_col].dt.tz_localize(None)
+        
         df = df.set_index(date_col)
         df = df[~df.index.isna()]
         
@@ -65,10 +69,10 @@ def load_asset(symbol, start_date=None, end_date=None):
         
         # Filtrer par date
         if start_date is not None:
-            start_date = pd.to_datetime(start_date)
+            start_date = pd.to_datetime(start_date, utc=True).tz_localize(None)
             prices = prices[prices.index >= start_date]
         if end_date is not None:
-            end_date = pd.to_datetime(end_date)
+            end_date = pd.to_datetime(end_date, utc=True).tz_localize(None)
             prices = prices[prices.index <= end_date]
         
         return prices
