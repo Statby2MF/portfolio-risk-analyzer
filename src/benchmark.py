@@ -245,13 +245,12 @@ def print_benchmark_report(metrics, benchmark_name="S&P 500"):
     print()
 
 
-# Test
 if __name__ == "__main__":
     import sys
     import os
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
-        from src.data_manager import load_portfolio
+    from src.data_manager import load_portfolio
     from src.portfolio_optimizer import optimize_max_sharpe
     
     # Charger les données
