@@ -66,10 +66,12 @@ def download_us_stock(symbol, period="5y"):
             return None
         
         df = data[["Close"]].copy()
+        
         # S'assurer que l'index est bien un DatetimeIndex
         df.index = pd.to_datetime(df.index, utc=True)
-df.index = df.index.tz_localize(None)
+        df.index = df.index.tz_localize(None)
         df.index.name = "Date"
+        
         # Convertir les prix en numérique
         df["Close"] = pd.to_numeric(df["Close"], errors='coerce')
         df = df.dropna()
@@ -78,6 +80,7 @@ df.index = df.index.tz_localize(None)
         df.to_csv(filepath)
         return df
     except Exception as e:
+        print(f"   ⚠️ {symbol}: {e}")
         return None
 
 
