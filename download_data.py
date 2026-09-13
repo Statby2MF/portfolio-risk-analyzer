@@ -67,7 +67,8 @@ def download_us_stock(symbol, period="5y"):
         
         df = data[["Close"]].copy()
         # S'assurer que l'index est bien un DatetimeIndex
-        df.index = pd.to_datetime(df.index)
+        df.index = pd.to_datetime(df.index, utc=True)
+df.index = df.index.tz_localize(None)
         df.index.name = "Date"
         # Convertir les prix en numérique
         df["Close"] = pd.to_numeric(df["Close"], errors='coerce')
