@@ -184,12 +184,12 @@ def generate_pdf_report(
             f"{optimal_portfolios['risk_parity'][i]*100:.1f}%",
         ])
     
-    alloc_table = Table(alloc_data, colWidths=[4.5*cm, 3.6*cm, 3.6*cm, 3.6*cm])
+        alloc_table = Table(alloc_data, colWidths=[4*cm, 3.7*cm, 3.7*cm, 3.6*cm])
     alloc_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0a3d2e')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('PADDING', (0, 0), (-1, -1), 5),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
         ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
@@ -226,7 +226,7 @@ def generate_pdf_report(
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
             ('PADDING', (0, 0), (-1, -1), 5),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
             ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
@@ -320,7 +320,7 @@ def generate_pdf_report(
     except Exception as e:
         elements.append(Paragraph(f"Stress tests non disponibles: {e}", body_style))
     
-    # ===== SECTION 6 : CONTRIBUTION =====
+        # ===== SECTION 6 : CONTRIBUTION =====
     elements.append(Paragraph("6. Contribution au risque (Risk Parity)", heading_style))
     
     try:
@@ -328,13 +328,15 @@ def generate_pdf_report(
         
         weights = np.array(optimal_portfolios['risk_parity']).flatten()
         
-        # Vérifier que les tailles correspondent
+        # Debug
+        print(f"DEBUG: len(weights) = {len(weights)}, len(assets) = {len(assets)}, len(returns_df.columns) = {len(returns_df.columns)}")
+        
         if len(weights) == len(returns_df.columns):
             rc = calculate_risk_contribution(returns_df, weights)
             
-            if rc:
+            if rc is not None:
                 contrib_data = [["Actif", "Poids", "Contribution", "Ratio"]]
-                for i, asset in enumerate(assets):
+                for i, asset in enumerate(returns_df.columns):
                     if i >= len(rc['weights']):
                         break
                     poids = rc['weights'][i] * 100
@@ -351,7 +353,7 @@ def generate_pdf_report(
                     ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#a855f7')),
                     ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                     ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0, 0), (-1, -1), 9),
+                    ('FONTSIZE', (0, 0), (-1, -1), 8),
                     ('PADDING', (0, 0), (-1, -1), 5),
                     ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
                     ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
@@ -368,7 +370,6 @@ def generate_pdf_report(
             elements.append(Paragraph(f"Taille incompatible : {len(weights)} poids vs {len(returns_df.columns)} actifs", body_style))
     except Exception as e:
         elements.append(Paragraph(f"Contribution non disponible: {e}", body_style))
-    
     # ===== SECTION 7 : SYNTHÈSE =====
     elements.append(Paragraph("7. Synthèse et recommandations", heading_style))
     
