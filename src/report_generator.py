@@ -164,10 +164,7 @@ def generate_pdf_report(
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
     ]))
     elements.append(perf_table)
-        # Graphique évolution
-    elements.append(Spacer(1, 0.5*cm))
-    chart1 = create_price_chart(prices_df, portfolio_prices)
-    elements.append(RLImage(chart1, width=17*cm, height=7.5*cm))
+        
         # Précision sur la période
     elements.append(Spacer(1, 0.3*cm))
     elements.append(Paragraph(
@@ -175,10 +172,7 @@ def generate_pdf_report(
         f"{returns_df.index[-1].strftime('%d/%m/%Y')} ({len(returns_df)} jours)</i>",
         body_style
     ))
-    # Graphique distribution
-    elements.append(Spacer(1, 0.5*cm))
-    chart2 = create_distribution_chart(portfolio_returns)
-    elements.append(RLImage(chart2, width=17*cm, height=7.5*cm))
+    
     # ===== SECTION 2 : ALLOCATION =====
     elements.append(Paragraph("2. Allocation optimale (Markowitz)", heading_style))
     
@@ -191,7 +185,7 @@ def generate_pdf_report(
             f"{optimal_portfolios['risk_parity'][i]*100:.1f}%",
         ])
     
-        alloc_table = Table(alloc_data, colWidths=[3.5*cm, 3.5*cm, 3.5*cm, 3.5*cm])
+    alloc_table = Table(alloc_data, colWidths=[3.2*cm, 3.3*cm, 3.3*cm, 3.3*cm])
     alloc_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0a3d2e')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -201,8 +195,16 @@ def generate_pdf_report(
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
         ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
     ]))
-    elements.append(alloc_table)
+    elements.append(KeepTogether([alloc_table]))
+        # Graphique évolution
+    elements.append(Spacer(1, 0.5*cm))
+    chart1 = create_price_chart(prices_df, portfolio_prices)
+    elements.append(RLImage(chart1, width=17*cm, height=7.5*cm))
     
+    # Graphique distribution
+    elements.append(Spacer(1, 0.5*cm))
+    chart2 = create_distribution_chart(portfolio_returns)
+    elements.append(RLImage(chart2, width=17*cm, height=7.5*cm))
     # ===== SECTION 3 : VALIDATION =====
     elements.append(Paragraph("3. Validation In-Sample / Out-of-Sample", heading_style))
     
@@ -401,9 +403,9 @@ def generate_pdf_report(
     quantifient le risque de pertes extrêmes. Le drawdown maximal de <b>{metrics['max_drawdown']*100:.2f}%</b> 
     représente la pire baisse historique.<br/><br/>
     <b>Recommandations :</b><br/>
-    • Privilégier l'allocation Max Sharpe pour le meilleur compromis rendement/risque<br/>
-    • Surveiller les jours où la VaR 99% est approchée<br/>
-    • Le portefeuille est bien diversifié avec des contributions équilibrées
+    - Privilégier l'allocation Max Sharpe pour le meilleur compromis rendement/risque<br/>
+    - Surveiller les jours où la VaR 99% est approchée<br/>
+    - Le portefeuille est bien diversifié avec des contributions équilibrées
     """
     elements.append(Paragraph(interpretation, body_style))
     
