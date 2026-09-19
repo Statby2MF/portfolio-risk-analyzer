@@ -191,13 +191,13 @@ def generate_pdf_report(
             f"{optimal_portfolios['risk_parity'][i]*100:.1f}%",
         ])
     
-        alloc_table = Table(alloc_data, colWidths=[4*cm, 3.7*cm, 3.7*cm, 3.6*cm])
+        alloc_table = Table(alloc_data, colWidths=[3.5*cm, 3.5*cm, 3.5*cm, 3.5*cm])
     alloc_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0a3d2e')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('PADDING', (0, 0), (-1, -1), 5),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
+        ('PADDING', (0, 0), (-1, -1), 3),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
         ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
     ]))
@@ -219,7 +219,7 @@ def generate_pdf_report(
         val_data = [["Portefeuille", "Sharpe In", "Sharpe Out", "Ratio", "Robustesse"]]
         for name, res in val_results.items():
             ratio = res['sharpe_ratio_out_in']
-            verdict = "ROBUSTE" if ratio > 0.7 else "MOYEN" if ratio > 0.4 else "SUR-APPRIS"
+            verdict = "Favorable" if ratio > 0.7 else "Modérée" if ratio > 0.4 else "Défavorable"
             val_data.append([
                 name,
                 f"{res['in_sample']['sharpe']:.3f}",
@@ -227,8 +227,7 @@ def generate_pdf_report(
                 f"{ratio:.2f}",
                 verdict,
             ])
-        verdict = "Favorable" if ratio > 0.7 else "Modérée" if ratio > 0.4 else "Défavorable"
-        val_table = Table(val_data, colWidths=[3.5*cm, 2.8*cm, 2.8*cm, 2.5*cm, 3.5*cm])
+        val_table = Table(val_data, colWidths=[3.5*cm, 2.cm, 8*2.8*cm, 2.5*cm, 3.5*cm])
         val_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -241,7 +240,13 @@ def generate_pdf_report(
         elements.append(val_table)
     except Exception as e:
         elements.append(Paragraph(f"Validation non disponible: {e}", body_style))
-    
+        elements.append(Spacer(1, 0.3*cm))
+    elements.append(Paragraph(
+        "<i>Note : La performance Out-of-Sample est supérieure à celle observée en In-Sample. "
+        "Cette amélioration peut être liée aux conditions de marché de la période de validation. "
+        "Une analyse sur plusieurs fenêtres temporelles est nécessaire pour confirmer la robustesse.</i>",
+        body_style
+    ))
     # ===== SECTION 4 : BENCHMARK =====
     elements.append(Paragraph("4. Comparaison avec le benchmark (S&P 500)", heading_style))
     
@@ -354,8 +359,7 @@ def generate_pdf_report(
                 poids = weights_arr[i] * 100
                 contrib = contrib_arr[i]
                 ratio = contrib / poids if poids != 0 else 0
-                ind = "⚠️" if ratio > 1.2 else "✅" if ratio < 0.8 else "⚪"
-                
+                ind = "(!)" if ratio > 1.2 else "(+)" if ratio < 0.8 else "(=)"
                 contrib_data.append([
                     asset, f"{poids:.1f}%", f"{contrib:.1f}%", f"{ratio:.2f} {ind}"
                 ])
@@ -373,7 +377,7 @@ def generate_pdf_report(
             elements.append(KeepTogether([contrib_table]))
             elements.append(Spacer(1, 0.3*cm))
             elements.append(Paragraph(
-                "⚠️ Amplificateur de risque · ✅ Diversificateur · ⚪ Équilibré",
+                "(!) Amplificateur de risque · (+) Diversificateur · (=) Équilibré"
                 body_style
             ))
         else:
