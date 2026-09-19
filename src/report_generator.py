@@ -227,7 +227,7 @@ def generate_pdf_report(
                 f"{ratio:.2f}",
                 verdict,
             ])
-        
+        verdict = "Favorable" if ratio > 0.7 else "Modérée" if ratio > 0.4 else "Défavorable"
         val_table = Table(val_data, colWidths=[3.5*cm, 2.8*cm, 2.8*cm, 2.5*cm, 3.5*cm])
         val_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
