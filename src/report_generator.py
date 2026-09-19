@@ -377,7 +377,7 @@ def generate_pdf_report(
             elements.append(KeepTogether([contrib_table]))
             elements.append(Spacer(1, 0.3*cm))
             elements.append(Paragraph(
-                "(!) Amplificateur de risque ,· (+) Diversificateur ,· (=) Équilibré"
+                "(!) Amplificateur de risque · (+) Diversificateur · (=) Équilibré",
                 body_style
             ))
         else:
