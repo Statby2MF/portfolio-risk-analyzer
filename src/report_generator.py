@@ -227,8 +227,8 @@ def generate_pdf_report(
                 f"{ratio:.2f}",
                 verdict,
             ])
-        val_table = Table(val_data, colWidths=[3.5*cm, 2.cm, 8*2.8*cm, 2.5*cm, 3.5*cm])
-        val_table.setStyle(TableStyle([
+            val_table = Table(val_data, colWidths=[3.5*cm, 2.8*cm, 2.8*cm, 2.5*cm, 3.5*cm])
+            val_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
