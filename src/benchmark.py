@@ -161,7 +161,9 @@ def calculate_all_benchmark_metrics(portfolio_returns, benchmark_returns, risk_f
     # Rendement total
     port_total = port_cum.iloc[-1] - 1
     bench_total = bench_cum.iloc[-1] - 1
-    
+        # Dates pour le rapport
+    start_date = port.index[0].strftime('%d/%m/%Y')
+    end_date = port.index[-1].strftime('%d/%m/%Y')
     return {
         "portfolio": {
             "return_ann": port_return_ann,
@@ -176,6 +178,8 @@ def calculate_all_benchmark_metrics(portfolio_returns, benchmark_returns, risk_f
             "sharpe": bench_sharpe,
             "max_drawdown": bench_dd,
             "total_return": bench_total,
+            "start_date": start_date,
+            "end_date": end_date,
         },
         "alpha": ab['alpha'] if ab else 0,
         "beta": ab['beta'] if ab else 0,
@@ -186,7 +190,7 @@ def calculate_all_benchmark_metrics(portfolio_returns, benchmark_returns, risk_f
         "excess_return": port_return_ann - bench_return_ann,
         "n_common_days": len(common_idx),
     }
-
+        
 
 def print_benchmark_report(metrics, benchmark_name="S&P 500"):
     """
