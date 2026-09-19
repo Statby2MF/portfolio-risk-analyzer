@@ -188,7 +188,7 @@ def print_validation_report(results):
         print(f"📉 Ratio out/in : {res['sharpe_ratio_out_in']:.2f}")
         
         if res['sharpe_ratio_out_in'] > 0.7:
-            print("✅ Le modèle est ROBUSTE (peu de sur-apprentissage)")
+            print("✅ Validation favorable (à confirmer sur d'autres fenêtres)")
         elif res['sharpe_ratio_out_in'] > 0.4:
             print("⚠️ Le modèle est MOYENNEMENT robuste")
         else:
