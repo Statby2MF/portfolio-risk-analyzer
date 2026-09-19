@@ -341,8 +341,10 @@ def generate_pdf_report(
     except Exception as e:
         elements.append(Paragraph(f"Stress tests non disponibles: {e}", body_style))
     
-           # ===== SECTION 6 : CONTRIBUTION =====
+              # ===== SECTION 6 : CONTRIBUTION =====
+    elements.append(PageBreak())  # Forcer une nouvelle page
     elements.append(Paragraph("6. Contribution au risque (Risk Parity)", heading_style))
+    elements.append(Spacer(1, 0.3*cm))
     
     try:
         from risk_contribution import calculate_risk_contribution
@@ -353,7 +355,6 @@ def generate_pdf_report(
         if rc is not None:
             contrib_data = [["Actif", "Poids", "Contribution", "Ratio"]]
             
-            # Utiliser .values pour éviter le problème d'index
             weights_arr = rc['weights']
             contrib_arr = rc['risk_contribution_normalized'].values if hasattr(rc['risk_contribution_normalized'], 'values') else rc['risk_contribution_normalized']
             
@@ -362,6 +363,7 @@ def generate_pdf_report(
                 contrib = contrib_arr[i]
                 ratio = contrib / poids if poids != 0 else 0
                 ind = "(!)" if ratio > 1.2 else "(+)" if ratio < 0.8 else "(=)"
+                
                 contrib_data.append([
                     asset, f"{poids:.1f}%", f"{contrib:.1f}%", f"{ratio:.2f} {ind}"
                 ])
@@ -372,11 +374,11 @@ def generate_pdf_report(
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, -1), 8),
-                ('PADDING', (0, 0), (-1, -1), 5),
+                ('PADDING', (0, 0), (-1, -1), 4),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
                 ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
             ]))
-            elements.append(KeepTogether([contrib_table]))
+            elements.append(contrib_table)
             elements.append(Spacer(1, 0.3*cm))
             elements.append(Paragraph(
                 "(!) Amplificateur de risque · (+) Diversificateur · (=) Équilibré",
@@ -386,6 +388,8 @@ def generate_pdf_report(
             elements.append(Paragraph("Contribution non disponible", body_style))
     except Exception as e:
         elements.append(Paragraph(f"Contribution non disponible: {e}", body_style))
+    
+    
     # ===== SECTION 7 : SYNTHÈSE =====
     elements.append(Paragraph("7. Synthèse et recommandations", heading_style))
     
