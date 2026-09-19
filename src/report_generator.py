@@ -1,6 +1,7 @@
 """
 Génération de rapport PDF professionnel - Version condensée
 """
+from reportlab.platypus import KeepTogether
 from reportlab.platypus import Image as RLImage
 import matplotlib
 matplotlib.use('Agg')
@@ -167,7 +168,13 @@ def generate_pdf_report(
     elements.append(Spacer(1, 0.5*cm))
     chart1 = create_price_chart(prices_df, portfolio_prices)
     elements.append(RLImage(chart1, width=17*cm, height=7.5*cm))
-    
+        # Précision sur la période
+    elements.append(Spacer(1, 0.3*cm))
+    elements.append(Paragraph(
+        f"<i>Période analysée : {returns_df.index[0].strftime('%d/%m/%Y')} → "
+        f"{returns_df.index[-1].strftime('%d/%m/%Y')} ({len(returns_df)} jours)</i>",
+        body_style
+    ))
     # Graphique distribution
     elements.append(Spacer(1, 0.5*cm))
     chart2 = create_distribution_chart(portfolio_returns)
@@ -285,7 +292,14 @@ def generate_pdf_report(
                 elements.append(bench_table)
     except Exception as e:
         elements.append(Paragraph(f"Benchmark non disponible: {e}", body_style))
-    
+            # Précision sur la période comparative
+        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Paragraph(
+            f"<i>Période comparative (dates communes BRVM/SPY) : "
+            f"{bench_metrics.get('start_date', 'N/A')} → {bench_metrics.get('end_date', 'N/A')} "
+            f"({bench_metrics.get('n_common_days', 'N/A')} jours)</i>",
+            body_style
+        ))
     # ===== SECTION 5 : STRESS TESTS =====
     elements.append(Paragraph("5. Stress Tests", heading_style))
     
@@ -320,54 +334,50 @@ def generate_pdf_report(
     except Exception as e:
         elements.append(Paragraph(f"Stress tests non disponibles: {e}", body_style))
     
-        # ===== SECTION 6 : CONTRIBUTION =====
+           # ===== SECTION 6 : CONTRIBUTION =====
     elements.append(Paragraph("6. Contribution au risque (Risk Parity)", heading_style))
     
     try:
         from risk_contribution import calculate_risk_contribution
         
         weights = np.array(optimal_portfolios['risk_parity']).flatten()
+        rc = calculate_risk_contribution(returns_df, weights)
         
-        # Debug
-        print(f"DEBUG: len(weights) = {len(weights)}, len(assets) = {len(assets)}, len(returns_df.columns) = {len(returns_df.columns)}")
-        
-        if len(weights) == len(returns_df.columns):
-            rc = calculate_risk_contribution(returns_df, weights)
+        if rc is not None:
+            contrib_data = [["Actif", "Poids", "Contribution", "Ratio"]]
             
-            if rc is not None:
-                contrib_data = [["Actif", "Poids", "Contribution", "Ratio"]]
-                for i, asset in enumerate(returns_df.columns):
-                    if i >= len(rc['weights']):
-                        break
-                    poids = rc['weights'][i] * 100
-                    contrib = rc['risk_contribution_normalized'][i]
-                    ratio = contrib / poids if poids != 0 else 0
-                    ind = "⚠️" if ratio > 1.2 else "✅" if ratio < 0.8 else "⚪"
-                    
-                    contrib_data.append([
-                        asset, f"{poids:.1f}%", f"{contrib:.1f}%", f"{ratio:.2f} {ind}"
-                    ])
+            # Utiliser .values pour éviter le problème d'index
+            weights_arr = rc['weights']
+            contrib_arr = rc['risk_contribution_normalized'].values if hasattr(rc['risk_contribution_normalized'], 'values') else rc['risk_contribution_normalized']
+            
+            for i, asset in enumerate(returns_df.columns):
+                poids = weights_arr[i] * 100
+                contrib = contrib_arr[i]
+                ratio = contrib / poids if poids != 0 else 0
+                ind = "⚠️" if ratio > 1.2 else "✅" if ratio < 0.8 else "⚪"
                 
-                contrib_table = Table(contrib_data, colWidths=[4.5*cm, 3.5*cm, 3.5*cm, 3.5*cm])
-                contrib_table.setStyle(TableStyle([
-                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#a855f7')),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0, 0), (-1, -1), 8),
-                    ('PADDING', (0, 0), (-1, -1), 5),
-                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
-                    ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
-                ]))
-                elements.append(contrib_table)
-                elements.append(Spacer(1, 0.3*cm))
-                elements.append(Paragraph(
-                    "⚠️ Amplificateur de risque · ✅ Diversificateur · ⚪ Équilibré",
-                    body_style
-                ))
-            else:
-                elements.append(Paragraph("Contribution non calculable", body_style))
+                contrib_data.append([
+                    asset, f"{poids:.1f}%", f"{contrib:.1f}%", f"{ratio:.2f} {ind}"
+                ])
+            
+            contrib_table = Table(contrib_data, colWidths=[4.5*cm, 3.5*cm, 3.5*cm, 3.5*cm])
+            contrib_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#a855f7')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('PADDING', (0, 0), (-1, -1), 5),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+            ]))
+            elements.append(KeepTogether([contrib_table]))
+            elements.append(Spacer(1, 0.3*cm))
+            elements.append(Paragraph(
+                "⚠️ Amplificateur de risque · ✅ Diversificateur · ⚪ Équilibré",
+                body_style
+            ))
         else:
-            elements.append(Paragraph(f"Taille incompatible : {len(weights)} poids vs {len(returns_df.columns)} actifs", body_style))
+            elements.append(Paragraph("Contribution non disponible", body_style))
     except Exception as e:
         elements.append(Paragraph(f"Contribution non disponible: {e}", body_style))
     # ===== SECTION 7 : SYNTHÈSE =====
